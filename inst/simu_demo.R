@@ -1,4 +1,5 @@
 library(fdasrvf)
+library(mvBayes)
 f <- function(x) {
   dnorm(seq(0, 1, length.out = 99),
         sin(2 * pi * x[1] ^ 2) / 4 - x[1] / 10 + 0.5,
@@ -42,18 +43,11 @@ psi_obs = gam_to_v(seq(0, 1, length.out=M))
 gam_obs = seq(0, 1, length.out=M)
 ftilde_obs = f_exp
 
-emu_ftilde = mvBayes(
-  BASS::bass,
-  sim_variables,
-  t(ftilde_sim),
-  nBasis=3
-)
-
 emu_vv = mvBayes(
   BASS::bass,
   sim_variables,
-  t(ftilde_sim),
-  warpData = warp_list
+  t(psi_sim),
+  basisType="pns"
 )
 
 tmp = predict(emu_vv, sim_variables)

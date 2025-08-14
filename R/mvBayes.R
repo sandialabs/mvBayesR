@@ -573,6 +573,7 @@ plot.mvBayes <- function(object,
   mseBasis <- numeric(object$basisInfo$nBasis)
   varBasis <- numeric(object$basisInfo$nBasis)
   if (object$basisInfo$basisType == "pns") {
+    mseTrunc = sum(object$basisInfo$varExplained[object$basisInfo$nBasis:object$basisInfo$nMV])
     for (k in 1:object$basisInfo$nBasis) {
       PNS = object$basisInfo$basisConstruct
       N = length(RbasisCoefs[, k])
@@ -580,22 +581,22 @@ plot.mvBayes <- function(object,
       inmat[k, ] = coefsPred[, k]
       basisScaled = as.matrix(fdasrvf:::fastPNSe2s(inmat, PNS)) * object$basisInfo$radius
       RbasisScaled[[k]] = Ytest - basisScaled
-      mseBasis[k] = mean((Ytest - basisScaled)^2)
-      varBasis[k] = mean(basisScaled^2)
+      mseBasis[k] = mean(RbasisCoefs[, k]^2)
+      varBasis[k] = mean(coefs[, k]^2)
     }
   } else {
+    mseTrunc = sum(object$basisInfo$varExplained[object$basisInfo$nBasis:object$basisInfo$nMV])*(nrow(Ytest)-1)/nrow(Ytest)
     for (k in 1:object$basisInfo$nBasis) {
       RbasisScaled[[k]] = t(t(outer(
         RbasisCoefs[idxPlot, k], object$basisInfo$basis[k, ]
       )) * object$basisInfo$Yscale) # all residuals
-      mseBasis[k] = mean(RbasisScaled[[k]]^2)
+      mseBasis[k] = mean(RbasisCoefs[, k]^2)
 
       basisScaled = t(t(outer(coefs[, k], object$basisInfo$basis[k, ])) * object$basisInfo$Yscale)
-      varBasis[k] = mean(basisScaled^2)
+      varBasis[k] = object$basisInfo$varExplained[k]*(nrow(Ytest)-1)/nrow(Ytest)
     }
   }
 
-  mseTrunc <- mean(truncError^2)
   mseOrder <- order(mseBasis, decreasing = TRUE)
 
   rgbCmap = grDevices::col2rgb('grey')
@@ -628,7 +629,7 @@ plot.mvBayes <- function(object,
 
   # R^2 plot
   r2Basis <- 1 - mseBasis / varBasis
-  varOverall <- sum(object$basisInfo$varExplained[1:object$basisInfo$nBasis])*(nrow(Ytest)-1)/nrow(Ytest)
+  varOverall <- sum(object$basisInfo$varExplained)*(nrow(Ytest)-1)/nrow(Ytest)
   r2Overall <- 1 - mseOverall / varOverall
 
   plot(
@@ -658,11 +659,7 @@ plot.mvBayes <- function(object,
   mseTruncProp <- (object$basisInfo$varExplained[(object$basisInfo$nBasis + 1):object$basisInfo$nMV] /
                      sum(object$basisInfo$varExplained[(object$basisInfo$nBasis + 1):object$basisInfo$nMV]))
   mseTruncCS <- cumsum(mseTruncProp * mseTrunc / mseOverall)
-  if (object$basisInfo$basisType == "pns") {
-    mseExplained = 1-object$basisInfo$varExplained
-  } else {
-    mseExplained = mseBasis / mseOverall
-  }
+  mseExplained = mseBasis / mseOverall
 
   plot(
     1:object$basisInfo$nBasis,
