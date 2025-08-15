@@ -47,18 +47,20 @@ mvSobol = function (object,
     class(object) = 'bassBasis'
     names(object)[names(object) == 'bmList'] = 'mod.list'
     names(object)[names(object) == 'basisInfo'] = 'dat'
+    object$dat$basis = t(object$dat$basis)
+    nUse = length(idxSamples)
 
     out.bass = BASS::sobolBasis(object, int.order=1, ...)
 
-    firstOrder = array(0, dim = c(nSamples, p, nMV))
-    varTotal = matrix(0, nSamples, nMV)
+    firstOrder = array(0, dim=c(nUse, p, nMV))
+    varTotal = matrix(0, nUse, nMV)
+    for (idx in 1:nUse){
+      firstOrder[idx,,] = out.bass$S.var[idx,1:p,]
+      varTotal[idx, ] = out.bass$S.var[idx,1,] / out.bass$S[idx,1,]
+    }
 
-    firstOrder = array(0, dim = c(nSamples, p, nMV))
-    varTotal = matrix(0, nSamples, nMV)
-
-    totalOrder = NULL
-    if (totalSobol) {
-      warning(" 'BASS' has not implemented totalOrder")
+    if (nUse==1){
+      varTotal = c(varTotal)
     }
 
     totalOrder = NULL
@@ -71,7 +73,6 @@ mvSobol = function (object,
       firstOrderSobol = firstOrder,
       totalOrderSobol = totalOrder,
       varTotal = varTotal,
-      # sobolProp = firstOrder / aperm(replicate(p, varTotal), c(1, 3, 2)),
       nMV = nMV,
       p = p
     )
