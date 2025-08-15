@@ -48,7 +48,6 @@ mvSobol = function (object,
     names(object)[names(object) == 'bmList'] = 'mod.list'
     names(object)[names(object) == 'basisInfo'] = 'dat'
     object$dat$basis = t(object$dat$basis)
-    nUse = length(idxSamples)
 
     out.bass = BASS::sobolBasis(object, int.order=1, ...)
 
