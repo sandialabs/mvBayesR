@@ -63,6 +63,7 @@ mvSobol = function (object,
 
     totalOrder = NULL
     if (totalSobol) {
+      totalSobol = FALSE
       warning(" 'BASS' has not implemented totalOrder")
     }
 
@@ -449,12 +450,14 @@ plot.sobol = function(object,
   )
 
   # total sobol plot
+  if (is.null(object$totalOrderSobol)) {
+    warning(
+      "'object' does not have totalOrderSobol"
+    )
+    totalSobol = FALSE
+  }
   if (totalSobol) {
-    if (is.null(object$totalOrderSobol)) {
-      warning(
-        "'object' does not have totalOrderSobol"
-      )
-    }
+
     totalOrder = apply(object$totalOrderSobol, c(2, 3), mean)
 
     plot(
