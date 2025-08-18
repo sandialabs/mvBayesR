@@ -55,9 +55,8 @@ cv = mvBayesCV(
   Y,
   nTest = 100,
   nRep = 2,
-  # mvBayesCV parameters
-  nBasis = 3,
   # mvBayes parameters
+  nBasis = 3,
   nburn = 8500 # bass parameters
 )
 
