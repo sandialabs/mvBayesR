@@ -33,7 +33,7 @@ plot(mod$basisInfo, idxMV = tt, xlabel = "tt")  # Plot PCA decomposition
 traceplot(mod)
 plot(mod, idxMV = tt, xlabel = "tt") # Evaluate training data fit
 plot(mod, Xtest = Xtest, Ytest = Ytest, idxMV = tt, xlabel = "tt")  # Evaluate test data fit
-modSensitivity = sobol(mod, nMC = 2^12)
+modSensitivity = mvSobol(mod, nMC = 2^12)
 plot(modSensitivity, idxMV = tt, xlabel = "tt")
 
 # All posterior predictive samples
@@ -56,7 +56,7 @@ plot(mod$basisInfo)  # Plot PCA decomposition
 traceplot(mod)
 plot(mod)  # Evaluate training data fit
 plot(mod, Xtest = Xtest, Ytest = Ytest)  # Evaluate test data fit
-modSensitivity = sobol(mod)
+modSensitivity = mvSobol(mod)
 plot(modSensitivity)
 
 # All posterior predictive samples

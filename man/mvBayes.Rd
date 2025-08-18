@@ -124,7 +124,7 @@ cv = mvBayesCV(
 )
 
 ## sensitivity
-sens = sobol(fit, nMC = 2^12, maxOrder = 1, totalSobol = FALSE) # use BASS functionality to compute mvSobol
+sens = mvSobol(fit, nMC = 2^12, totalSobol = FALSE) # use BASS functionality to compute mvSobol
 
 ## Write a wrapper for a non-conforming function to conform to mvBayes requirements
 linmod = function(X, y, ...)
