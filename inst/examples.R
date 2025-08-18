@@ -49,7 +49,7 @@ plot(fit,
 
 
 ## cross-validation
-cv = mvBayesCV(
+cv = mvCV(
   BASS::bass,
   X,
   Y,
