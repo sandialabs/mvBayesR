@@ -148,13 +148,8 @@ fit.mvBayes <- function(object, nCores = 1, ...) {
                            nCores = nCores,
                            returnPostCoefs = TRUE)$postCoefs
       for (k in 1:length(object$bmList)) {
-        resid <- object$basisInfo$coefs[, k] - postCoefs[, , k]
-        if (dim(postCoefs)[1] == 1){
-          object$bmList[[k]]$samples$residSD <- sd(resid)
-        } else {
-          object$bmList[[k]]$samples$residSD <- apply(resid, 1, sd)
-        }
-
+        resid <- object$basisInfo$coefs[, k] - t(postCoefs[, , k])
+        object$bmList[[k]]$samples$residSD <- apply(resid, 2, sd)
       }
     }
   } else {

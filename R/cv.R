@@ -69,7 +69,7 @@ mvCV = function(bayesModel,
 
 
   # Run cv
-  rmse = rSquared = coverage = intervalWidth = intervalScore = fit_time = pred_time = numeric(nRep)
+  rmse = rSquared = coverage = intervalWidth = intervalScore = fitTime = predictTime = numeric(nRep)
   for (r in 1:nRep) {
     # Set up train/test split
     Xtrain = X[idxTrain[, r], ]
@@ -80,13 +80,13 @@ mvCV = function(bayesModel,
 
     # Fit models
     if (methods::hasArg("warp_data")) {
-      start_fit = Sys.time()
+      startFit = Sys.time()
       fit = mvBayesElastic(bayesModel, Xtrain, Ytrain, idx = idxTrain[, r], ...)
-      fit_time[r] = as.numeric(Sys.time() - start_fit, units = "secs")
+      fitTime[r] = as.numeric(Sys.time() - startFit, units = "secs")
     } else {
-      start_fit = Sys.time()
+      startFit = Sys.time()
       fit = mvBayes(bayesModel, Xtrain, Ytrain, ...)
-      fit_time[r] = as.numeric(Sys.time() - start_fit, units = "secs")
+      fitTime[r] = as.numeric(Sys.time() - startFit, units = "secs")
     }
 
     # Calculate rmse of posterior mean
@@ -95,7 +95,7 @@ mvCV = function(bayesModel,
     if (idxSamples[1] != "all") {
       preds = preds[idxSamples, , ]
     }
-    pred_time[r] = as.numeric(Sys.time() - start_pred, units = "secs")
+    predictTime[r] = as.numeric(Sys.time() - start_pred, units = "secs")
 
     Yhat = apply(preds, 2:3, median)
     if (methods::hasArg("warp_data")) {
@@ -166,6 +166,8 @@ mvCV = function(bayesModel,
       truncError = aperm(array(t(fit$basisInfo$truncError[idxResample, ]), dim =
                                  dim(preds)[c(3, 1, 2)]), c(2, 3, 1))
     }
+    preds = preds + truncError
+    rm(truncError)
 
     # Get regression error for UQ
     coefsResidError = array(dim = c(dim(preds)[1:2], fit$basisInfo$nBasis))
@@ -187,16 +189,18 @@ mvCV = function(bayesModel,
     for (idxMCMC in 1:dim(preds)[1]) {
       residError[idxMCMC, , ] = coefsResidError[idxMCMC, , ] %*% fit$basisInfo$basis
     }
-
-    # Get posterior predictive samples
-    postPredSamples = preds + truncError + residError
+    rm(coefsResidError)
+    preds = preds + residError
+    rm(residError)
 
     # Calculate distance from posterior mean
     distBound = numeric(dim(preds)[2])
     for (idx in 1:dim(preds)[2]) {
-      distSamples = sqrt(apply((t(
-        postPredSamples[, idx, ]
-      ) - Yhat[idx, ])^2, 2, mean))
+      distSamples = sqrt(apply(
+        (t(preds[, idx, ]) - Yhat[idx, ])^2,
+        2,
+        mean
+      ))
       distBound[idx] = quantile(distSamples, coverageTarget)
     }
     distTest = sqrt(apply((Ytest - Yhat)^2, 1, mean))
@@ -216,8 +220,8 @@ mvCV = function(bayesModel,
     coverage = coverage,
     intervalWidth = intervalWidth,
     intervalScore = intervalScore,
-    fit_time = fit_time,
-    predict_time = pred_time,
+    fitTime = fitTime,
+    predictTime = predictTime,
     call = match.call()
   )
 
