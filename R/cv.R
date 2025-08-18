@@ -17,7 +17,7 @@
 #' @keywords multivariate Bayesian regression modeling, functional data analysis
 #' @seealso \link{mvBayes}, \link{predict.mvBayes} for prediction
 #' @export
-mvBayesCV = function(bayesModel,
+mvCV = function(bayesModel,
                      X,
                      Y,
                      nTrain = NULL,

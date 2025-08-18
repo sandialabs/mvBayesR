@@ -13,7 +13,7 @@
 #' @export
 #' @import BASS
 #'
-sobol = function (object,
+mvSobol = function (object,
                   totalSobol = TRUE,
                   idxSamples = "final",
                   nMC = NULL,
@@ -48,7 +48,7 @@ sobol = function (object,
     names(object)[names(object) == 'bmList'] = 'mod.list'
     names(object)[names(object) == 'basisInfo'] = 'dat'
 
-    out.bass = BASS::sobolBasis(object, ...)
+    out.bass = BASS::sobolBasis(object, int.order=1, ...)
 
     firstOrder = array(0, dim = c(nSamples, p, nMV))
     varTotal = matrix(0, nSamples, nMV)
