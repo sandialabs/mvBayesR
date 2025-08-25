@@ -633,7 +633,7 @@ plot.mvBayes <- function(object,
 
   # R^2 plot
   r2Basis <- 1 - mseBasis / varBasis
-  varOverall <- mean(Ycentered^2)
+  varOverall <- sum(object$basisInfo$varExplained[1:object$basisInfo$nBasis])*(nrow(Ytest)-1)/nrow(Ytest)
   r2Overall <- 1 - mseOverall / varOverall
 
   plot(
