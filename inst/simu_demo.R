@@ -35,14 +35,21 @@ warp_list = multiple_align_functions(
   verbose = FALSE
 )
 gam_sim = warp_list$warping_functions
-psi_sim = gam_to_psi(warp_list$warping_functions)
+psi_sim = gam_to_v(warp_list$warping_functions)
 ftilde_sim = warp_list$fn
 
-psi_obs = gam_to_psi(seq(0, 1, length.out=M))
+psi_obs = gam_to_v(seq(0, 1, length.out=M))
 gam_obs = seq(0, 1, length.out=M)
 ftilde_obs = f_exp
 
-emu_vv = mvBayesElastic(
+emu_ftilde = mvBayes(
+  BASS::bass,
+  sim_variables,
+  t(ftilde_sim),
+  nBasis=3
+)
+
+emu_vv = mvBayes(
   BASS::bass,
   sim_variables,
   t(ftilde_sim),
@@ -52,3 +59,5 @@ emu_vv = mvBayesElastic(
 tmp = predict(emu_vv, sim_variables)
 
 plot(emu_vv)
+
+tmp = mvSobol(emu_vv, nMC=2^5)
