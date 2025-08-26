@@ -263,8 +263,14 @@ predict.mvBayes = function(object,
     inmat = matrix(0, length(PNS$PNS$radii), N)
     inmat[1:nBasis, ] = t(array(postCoefs, dim = c(N, nBasis)))
     YtruncStandard = fdasrvf:::fastPNSe2s(inmat, PNS)
-    YpostT = array(YtruncStandard, dim = c(nSamples, n, q)) * object$basisInfo$radius
-    YpostT = aperm(YpostT, c(3, 2, 1))
+    if (nSamples == 1){
+      YpostT = array(YtruncStandard, dim = c(n, q)) * object$basisInfo$radius
+      YpostT = t(YpostT)
+    } else {
+      YpostT = array(YtruncStandard, dim = c(nSamples, n, q)) * object$basisInfo$radius
+      YpostT = aperm(YpostT, c(3, 2, 1))
+    }
+
     rm(YtruncStandard)
   } else {
     if (n == 1) {
@@ -274,7 +280,6 @@ predict.mvBayes = function(object,
       YstandardPostT_list = lapply(1:nSamples, function(it)
         t(basis) %*% t(postCoefs[it, , ]))
     }
-    YstandardPostT = array(unlist(YstandardPostT_list), dim = c(q, n, nSamples))
     YpostT = YstandardPostT * object$basisInfo$Yscale + object$basisInfo$Ycenter
   }
 
