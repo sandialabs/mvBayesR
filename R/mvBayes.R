@@ -273,24 +273,43 @@ predict.mvBayes = function(object,
 
     rm(YtruncStandard)
   } else {
-    if (n == 1) {
-      YstandardPostT_list = lapply(1:nSamples, function(it)
-        t(basis) %*% t(t(postCoefs[it, , ])))
+    if (nSamples == 1){
+      if (n == 1){
+        YstandardPostT =  t(basis) %*% t(t(postCoefs[1, , ]))
+      } else {
+        YstandardPostT =  t(basis) %*% t(postCoefs[1, , ])
+      }
     } else {
-      YstandardPostT_list = lapply(1:nSamples, function(it)
-        t(basis) %*% t(postCoefs[it, , ]))
+      YstandardPostT = array(0, dim = c(q, n, nSamples))
+      for (it in 1:nSamples){
+        if (n == 1){
+          YstandardPostT[, , it] =  t(basis) %*% t(t(postCoefs[it, , ]))
+        } else {
+          YstandardPostT[, , it] =  t(basis) %*% t(postCoefs[it, , ])
+        }
+
+      }
     }
     YpostT = YstandardPostT * object$basisInfo$Yscale + object$basisInfo$Ycenter
   }
 
-  Ypost = aperm(YpostT, 3:1)
+  if (nSamples == 1){
+    YpostT = t(YpostT)
+  } else {
+    YpostT = aperm(YpostT, 3:1)
+  }
 
   if (addTruncError) {
     idx = sample(nrow(object$basisInfo$truncError),
                  size = nSamples * ntest,
                  replace = TRUE)
-    truncError = array(object$basisInfo$truncError[idx, ], dim = c(nSamples, ntest, nMV))
-    Ypost = Ypost + truncError
+    if (nSamples == 1){
+      truncError = array(object$basisInfo$truncError[idx, ], dim = c(ntest, nMV))
+    } else {
+      truncError = array(object$basisInfo$truncError[idx, ], dim = c(nSamples, ntest, nMV))
+    }
+
+    YpostT = YpostT + truncError
   }
 
   if (returnPostCoefs) {
@@ -495,8 +514,13 @@ plot.mvBayes <- function(object,
   Ypost <- YpostObj$Ypost
   postCoefs <- YpostObj$postCoefs
 
-  Ypred <- apply(Ypost, 2:3, mean)
+  if (ndims(Ypost)==3){
+    Ypred <- apply(Ypost, 2:3, mean)
+  } else {
+    Ypred <- Ypost
+  }
   coefsPred <- apply(postCoefs, 2:3, mean)
+
   R <- Ytest - Ypred
   RbasisCoefs <- coefs - coefsPred
 
