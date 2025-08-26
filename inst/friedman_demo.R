@@ -1,39 +1,34 @@
 # Load necessary libraries
 library(mvBayes)
-library(BayesPPR)
+library(BASS)
 
 # Generate Data
-f = function(x){
-  out = 10.0 * sin(pi * tt * x[1]) +
-    20.0 * (x[2] - 0.5)^2 +
-    10 * x[3] +
-    5.0 * x[4]
-  return(out)
+f<-function(x){
+  10*sin(pi*x[,1]*x[,2])+20*(x[,3]-.5)^2+10*x[,4]+5*x[,5]
 }
 
-tt = seq(0, 1, length.out = 50)  # functional variable grid
+sigma<-1
+nfunc = 50
+tt = seq(0, 1, length.out = nfunc)  # functional variable grid
 n = 500  # sample size
 p = 9  # number of predictors other (only 4 are used)
-X = matrix(runif(n * p), n, p)  # training inputs
-Y = t(apply(X, 1, f)) + matrix(rnorm(n * length(tt), sd = 0.1), n, length(tt))  # training response
+X<-matrix(runif(n*p),n,p) # 9 non-functional variables, only first 4 matter
+x<-cbind(rep(tt,each=n),kronecker(rep(1,nfunc),X)) # to get y
+Y<-matrix(f(x),nrow=n)+rnorm(n*nfunc,0,sigma)
 
 ntest = 1000
 Xtest = matrix(runif(ntest * p), ntest, p)
-Ytest = t(apply(Xtest, 1, f)) + matrix(rnorm(ntest * length(tt), sd = 0.1), ntest, length(tt))
+x<-cbind(rep(tt,each=ntest),kronecker(rep(1,nfunc),Xtest)) # to get y
+Ytest = matrix(f(x),nrow=ntest)+rnorm(ntest*nfunc,0,sigma)
 
 # Fit a multivariate BayesPPR model
 mod = mvBayes(
-  bppr,
+  bass,
   X,
   Y,
-  idxSamplesArg = 'idx_use',  # 'idx_use' is bppr's equivalent of idxSamples
-  # optionally extract posterior samples of key parameters
-  samplesExtract = function(bppr_out) list(
-    n_ridge = bppr_out$n_ridge,
-    residSD = bppr_out$sd_resid,
-    var_coefs = bppr_out$var_coefs
-  )
+  nBasis=5
 )
+plot(mod)
 plot(mod$basisInfo, idxMV = tt, xlabel = "tt")  # Plot PCA decomposition
 traceplot(mod)
 plot(mod, idxMV = tt, xlabel = "tt") # Evaluate training data fit
