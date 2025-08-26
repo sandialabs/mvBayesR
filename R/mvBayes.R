@@ -273,49 +273,33 @@ predict.mvBayes = function(object,
 
     rm(YtruncStandard)
   } else {
-    if (nSamples == 1){
-      if (n == 1){
-        YstandardPostT =  t(basis) %*% t(t(postCoefs[1, , ]))
-      } else {
-        YstandardPostT =  t(basis) %*% t(postCoefs[1, , ])
+    if (n == 1) {
+      YstandardPostT = array(NA, dim = c(q, n, nSamples))
+      for (it in 1:nSamples){
+        YstandardPostT[, , it] =  t(basis) %*% t(t(postCoefs[it, , ]))
       }
     } else {
-      YstandardPostT = array(0, dim = c(q, n, nSamples))
+      YstandardPostT = array(NA, dim = c(q, n, nSamples))
       for (it in 1:nSamples){
-        if (n == 1){
-          YstandardPostT[, , it] =  t(basis) %*% t(t(postCoefs[it, , ]))
-        } else {
-          YstandardPostT[, , it] =  t(basis) %*% t(postCoefs[it, , ])
-        }
-
+        YstandardPostT[, , it] =  t(basis) %*% t(postCoefs[it, , ])
       }
-    }
       YpostT = YstandardPostT * object$basisInfo$Yscale + object$basisInfo$Ycenter
   }
 
-  if (nSamples == 1){
-    YpostT = t(YpostT)
-  } else {
-    YpostT = aperm(YpostT, 3:1)
-  }
+  YpostT = aperm(YpostT, 3:1)
 
   if (addTruncError) {
     idx = sample(nrow(object$basisInfo$truncError),
                  size = nSamples * ntest,
                  replace = TRUE)
-    if (nSamples == 1){
-      truncError = array(object$basisInfo$truncError[idx, ], dim = c(ntest, nMV))
-    } else {
-      truncError = array(object$basisInfo$truncError[idx, ], dim = c(nSamples, ntest, nMV))
-    }
-
+    truncError = array(object$basisInfo$truncError[idx, ], dim = c(nSamples, ntest, nMV))
     YpostT = YpostT + truncError
   }
 
   if (returnPostCoefs) {
-    return(list(Ypost = Ypost, postCoefs = postCoefs))
+    return(list(Ypost = YpostT, postCoefs = postCoefs))
   } else {
-    return(Ypost)
+    return(YpostT)
   }
 }
 
