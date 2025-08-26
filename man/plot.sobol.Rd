@@ -22,7 +22,19 @@
 \arguments{
 \item{object}{An object of class "mvSobol" containing the Sobol Indices}
 
+\item{totalSobol}{A boolean to plot the total sobol (default = `TRUE`)}
+
 \item{labels}{A character vector of length <= 8 containing the names of the parameters}
+
+\item{idxMV}{A vector defining the time points}
+
+\item{xscale}{string whether to plot on a "linear" scale or "log"}
+
+\item{xlabel}{string for the xlabel}
+
+\item{yOverlay}{A boolean if to overlay the experimental function (default = `NULL`)}
+
+\item{yOverlayLabel}{A string defining the overlay label}
 
 \item{waterfall}{bool whether to plot sobol as a waterfall (functional pie-chart) default (`FALSE`)}
 

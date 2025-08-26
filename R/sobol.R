@@ -112,9 +112,15 @@ sobol = function (object,
     )
     rm("saltelliSequence")
 
-    meanS = colMeans(saltelliMC[1, , ])
-    meanS = t(replicate(nrow(saltelliMC[1, , ]), meanS))
-    saltelliMC = saltelliMC[1, , ] - meanS
+    if (ndims(saltelliMC) == 3){
+      meanS = colMeans(saltelliMC[1, , ])
+      meanS = t(replicate(nrow(saltelliMC[1, , ]), meanS))
+      saltelliMC = saltelliMC[1, , ] - meanS
+    } else {
+      meanS = colMeans(saltelliMC)
+      meanS = t(replicate(nrow(saltelliMC), meanS))
+      saltelliMC = saltelliMC - meanS
+    }
 
     basisType = object$basisInfo$basisType
 
@@ -212,13 +218,13 @@ sobol = function (object,
 #'
 #' @description Given an object of class "mvSobol" from the mvSobol() function
 #' @param object An object of class "mvSobol" containing the Sobol Indices
-#' @param totalSobol
+#' @param totalSobol A boolean to plot the total sobol (default = `TRUE`)
 #' @param labels A character vector of length <= 8 containing the names of the parameters
-#' @param idxMV
-#' @param xscale
-#' @param xlabel
-#' @param yOverlay
-#' @param yOverlayLabel
+#' @param idxMV A vector defining the time points
+#' @param xscale string whether to plot on a "linear" scale or "log"
+#' @param xlabel string for the xlabel
+#' @param yOverlay A boolean if to overlay the experimental function (default = `NULL`)
+#' @param yOverlayLabel A string defining the overlay label
 #' @param waterfall bool whether to plot sobol as a waterfall (functional pie-chart) default (`FALSE`)
 #' @param file An optional location at which the plots will be saved. If NULL, no file is saved.
 #' @param title An optional title to be printed at the top of the traceplots.
