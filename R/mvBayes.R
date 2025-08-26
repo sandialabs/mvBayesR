@@ -416,7 +416,7 @@ traceplot = function(object,
 #' @title Plot the Bayesian Model Fit of a Multivariate Response
 #'
 #' @description Given an object of class "mvBayes" from the mvBayes() function, plot.mvBayes() plots a few aspects of the Bayesian model fit, colored by basis.
-#' @param x An object of class "mvBayes" containing the multivariate Bayesian model fit of a response matrix Y.
+#' @param object An object of class "mvBayes" containing the multivariate Bayesian model fit of a response matrix Y.
 #' @param Xtest A matrix or data.frame of inputs at which the model fit will be evaluated. If NULL, the training inputs X will be used.
 #' @param Ytest A matrix of responses for which the model fit will be evaluated. Should correspond to Xtest. If NULL, the training responses Y will be used.
 #' @param idxSamples str which samples to use
@@ -562,7 +562,7 @@ plot.mvBayes <- function(object,
     cex = 0.65,
     y.intersp = 0.75,
     text.width=0.25*diff(range(idxMV)),
-    bg = rgb(1, 1, 1, 0.2)
+    bg = grDevices::rgb(1, 1, 1, 0.2)
   )
 
   # Residual decomposition plot

@@ -19,6 +19,8 @@
 )
 }
 \arguments{
+\item{object}{An object of class "mvBayes" containing the multivariate Bayesian model fit of a response matrix Y.}
+
 \item{Xtest}{A matrix or data.frame of inputs at which the model fit will be evaluated. If NULL, the training inputs X will be used.}
 
 \item{Ytest}{A matrix of responses for which the model fit will be evaluated. Should correspond to Xtest. If NULL, the training responses Y will be used.}
@@ -38,8 +40,6 @@
 \item{file}{An optional location at which the plot will be saved. If NULL, no file is saved.}
 
 \item{...}{additional plot arguments}
-
-\item{x}{An object of class "mvBayes" containing the multivariate Bayesian model fit of a response matrix Y.}
 }
 \value{
 Top left: Residuals after applying mvBayes(), plotted on top of Ytest (centered if centered=TRUE in the mvBayes() call). Top right: Residuals decomposed and colored by basis. Bottom left: R^2 values for each component. Bottom right: %Residual variance attribution for each component.

@@ -361,7 +361,7 @@ plot.sobol = function(object,
     plot(
       idxMV, yOverlay,
       type = 'l', lty = 2,
-      col = rgb(0, 0, 0, 0.7),
+      col = grDevices::rgb(0, 0, 0, 0.7),
       axes = FALSE, xlab = "", ylab = ""
     )
     axis(side = 4, at = pretty(range(yOverlay)))
@@ -423,7 +423,7 @@ plot.sobol = function(object,
     plot(
       idxMV, yOverlay,
       type = 'l', lty = 2,
-      col = rgb(0, 0, 0, 0.7),
+      col = grDevices::rgb(0, 0, 0, 0.7),
       axes = FALSE, xlab = "", ylab = ""
     )
     axis(side = 4, at = pretty(range(yOverlay)))
@@ -439,7 +439,7 @@ plot.sobol = function(object,
     cex = 0.65,
     y.intersp = 0.75,
     text.width=0.25*diff(range(idxMV)),
-    bg = rgb(1, 1, 1, 0.2)
+    bg = grDevices::rgb(1, 1, 1, 0.2)
   )
 
   # total sobol plot
@@ -480,7 +480,7 @@ plot.sobol = function(object,
     plot(
       idxMV, yOverlay,
       type = 'l', lty = 2,
-      col = rgb(0, 0, 0, 0.7),
+      col = grDevices::rgb(0, 0, 0, 0.7),
       axes = FALSE, xlab = "", ylab = ""
     )
     axis(side = 4, at = pretty(range(yOverlay)))

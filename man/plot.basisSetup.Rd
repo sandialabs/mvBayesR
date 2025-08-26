@@ -26,6 +26,12 @@
 
 \item{nPlot}{A positive integer specifying the number of samples to plot. Default is min(n, 1000), where n is nrow(Xtest) (or nrow(object$X) if Xtest is NULL).}
 
+\item{idxMV}{A vector describing time indices}
+
+\item{xscale}{string whether to plot on a "linear" scale or "log"}
+
+\item{xlabel}{string for the xlabel}
+
 \item{file}{An optional location at which the plot will be saved. If NULL, no file is saved.}
 
 \item{title}{An optional title to be printed at the top of the plot.}

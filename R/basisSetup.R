@@ -194,6 +194,9 @@ preprocessY.basisSetup = function(object, Ytest = NULL, ...) {
 #' @param nBasis An integer specifying the number of basis functions to plot. If both nBasis and propVarExplained are NULL, object$nBasis is used, but anything <= object$nbasis is allowed.
 #' @param propVarExplained Proportion (between 0 and 1) of variation to represent when choosing the number of bases to plot. It is only used if nBasis is NULL. If both are NULL, object$nBasis bases are plotted.
 #' @param nPlot A positive integer specifying the number of samples to plot. Default is min(n, 1000), where n is nrow(Xtest) (or nrow(object$X) if Xtest is NULL).
+#' @param idxMV A vector describing time indices
+#' @param xscale string whether to plot on a "linear" scale or "log"
+#' @param xlabel string for the xlabel
 #' @param file An optional location at which the plot will be saved. If NULL, no file is saved.
 #' @param title An optional title to be printed at the top of the plot.
 #' @param ... additional plot arguments
