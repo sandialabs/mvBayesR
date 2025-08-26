@@ -290,7 +290,7 @@ predict.mvBayes = function(object,
 
       }
     }
-    YpostT = YstandardPostT * object$basisInfo$Yscale + object$basisInfo$Ycenter
+      YpostT = YstandardPostT * object$basisInfo$Yscale + object$basisInfo$Ycenter
   }
 
   if (nSamples == 1){
