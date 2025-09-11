@@ -4,7 +4,7 @@ An R implementation of the multivariate Bayesian regression (mvBayes) framework.
 
 
 ## Examples
-* [Friedman Example](inst/friedman_example.R) - An extension of the "Friedman function" to functional response. The Bayesian regression model here is BASS (Bayesian Adaptive Smoothing Splines, see https://github.com/lanl/BASS)
+* [Friedman Example](inst/friedman_demo.R) - An extension of the "Friedman function" to functional response. The Bayesian regression model here is BASS (Bayesian Adaptive Smoothing Splines, see https://github.com/lanl/BASS)
 
 
 ### Installation
