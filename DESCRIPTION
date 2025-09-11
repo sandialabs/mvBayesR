@@ -1,0 +1,32 @@
+Package: mvBayes
+Type: Package
+Title: Multivariate Bayesian Regression
+Version: 1.2.0
+Authors@R: c(
+    person(given = "Gavin", 
+           family = "Collins", 
+           role = c("aut", "cre"), 
+           email = "gqcolli@sandia.gov"),
+    person(given = "J. Derek",
+           family = "Tucker",
+           role = "ctb",
+           email = "jdtuck@sandia.gov",
+           comment = c(ORCID = "0000-0001-8844-2169")))
+Description: Fit, plot, and predict a multivariate response, using an arbitrary univariate Bayesian regression model to independently fit basis components (e.g., principal components) of the response.
+License: MIT + file LICENSE
+Imports:
+    MASS,
+    methods,
+    BASS,
+    latex2exp,
+    cli,
+    splines
+Suggests: 
+    fdasrvf,
+    Splinets,
+    DDK,
+    BayesPPR,
+    scaledVecchia
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.2
