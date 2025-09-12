@@ -1,4 +1,4 @@
-[![R-CMD-check](https://github.com/sandialabs/mvBayesR/actions/workflows/r.yaml/badge.svg)](https://github.com/sandialabs/mvBayesR/actions/workflows/r.yaml)
+[![R-CMD-check](https://github.com/sandialabs/mvBayesR/actions/workflows/r.yml/badge.svg)](https://github.com/sandialabs/mvBayesR/actions/workflows/r.yml)
 
 # mvBayes
 
