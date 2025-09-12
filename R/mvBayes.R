@@ -268,26 +268,42 @@ predict.mvBayes = function(object,
 
     rm(YtruncStandard)
   } else {
-    if (n == 1) {
-      YstandardPostT = array(NA, dim = c(q, n, nSamples))
-      for (it in 1:nSamples){
-        YstandardPostT[, , it] =  t(basis) %*% t(t(postCoefs[it, , ]))
+    if (nSamples == 1){
+      if (n == 1){
+        YstandardPostT =  t(basis) %*% t(t(postCoefs[1, , ]))
+      } else {
+        YstandardPostT =  t(basis) %*% t(postCoefs[1, , ])
       }
     } else {
-      YstandardPostT = array(NA, dim = c(q, n, nSamples))
+      YstandardPostT = array(0, dim = c(q, n, nSamples))
       for (it in 1:nSamples){
-        YstandardPostT[, , it] =  t(basis) %*% t(postCoefs[it, , ])
+        if (n == 1){
+          YstandardPostT[, , it] =  t(basis) %*% t(t(postCoefs[it, , ]))
+        } else {
+          YstandardPostT[, , it] =  t(basis) %*% t(postCoefs[it, , ])
+        }
+
       }
-      YpostT = YstandardPostT * object$basisInfo$Yscale + object$basisInfo$Ycenter
+    }
+    YpostT = YstandardPostT * object$basisInfo$Yscale + object$basisInfo$Ycenter
   }
 
-  YpostT = aperm(YpostT, 3:1)
+  if (nSamples == 1){
+    YpostT = t(YpostT)
+  } else {
+    YpostT = aperm(YpostT, 3:1)
+  }
 
   if (addTruncError) {
     idx = sample(nrow(object$basisInfo$truncError),
                  size = nSamples * ntest,
                  replace = TRUE)
-    truncError = array(object$basisInfo$truncError[idx, ], dim = c(nSamples, ntest, nMV))
+    if (nSamples == 1){
+      truncError = array(object$basisInfo$truncError[idx, ], dim = c(ntest, nMV))
+    } else {
+      truncError = array(object$basisInfo$truncError[idx, ], dim = c(nSamples, ntest, nMV))
+    }
+
     YpostT = YpostT + truncError
   }
 
@@ -590,10 +606,10 @@ plot.mvBayes <- function(object,
       RbasisScaled[[k]] = t(t(outer(
         RbasisCoefs[idxPlot, k], object$basisInfo$basis[k, ]
       )) * object$basisInfo$Yscale) # all residuals
-      mseBasis[k] = mean(RbasisCoefs[, k]^2)
+      mseBasis[k] = mean(RbasisScaled[[k]]^2)
 
       basisScaled = t(t(outer(coefs[, k], object$basisInfo$basis[k, ])) * object$basisInfo$Yscale)
-      varBasis[k] = object$basisInfo$varExplained[k]*(nrow(Ytest)-1)/nrow(Ytest)
+      varBasis[k] = mean(basisScaled^2)
     }
   }
 
@@ -629,7 +645,7 @@ plot.mvBayes <- function(object,
 
   # R^2 plot
   r2Basis <- 1 - mseBasis / varBasis
-  varOverall <- sum(object$basisInfo$varExplained)*(nrow(Ytest)-1)/nrow(Ytest)
+  varOverall <- mean(Ycentered^2)
   r2Overall <- 1 - mseOverall / varOverall
 
   plot(
