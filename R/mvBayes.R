@@ -546,7 +546,7 @@ plot.mvBayes <- function(object,
   par(mfrow = c(2, 2), mar = c(5, 5, 1, 1), oma = c(0, 0, 2, 0))
 
   # Residuals plot
-  mseOverall <- mean(R^2)
+  mseOverall <- mean(R^2) * ncol(Ytest)
   if (length(object$basisInfo$Ycenter) == 1 &
       length(object$basisInfo$Yscale) == 1) {
     legendLab = "Y"
@@ -566,7 +566,7 @@ plot.mvBayes <- function(object,
     cex.lab = 0.9
   )
   mtext(
-    sprintf("Overall MSE = %.4g", mseOverall),
+    sprintf("Overall MSE = %.4g", mseOverall/ncol(Ytest)),
     cex=0.85
   )
   matlines(idxMV,
@@ -589,7 +589,7 @@ plot.mvBayes <- function(object,
   mseBasis <- numeric(object$basisInfo$nBasis)
   varBasis <- numeric(object$basisInfo$nBasis)
   if (object$basisInfo$basisType == "pns") {
-    mseTrunc = sum(object$basisInfo$varExplained[object$basisInfo$nBasis:object$basisInfo$nMV])
+    mseTrunc = sum(object$basisInfo$varExplained[(object$basisInfo$nBasis + 1):object$basisInfo$nMV])
     for (k in 1:object$basisInfo$nBasis) {
       PNS = object$basisInfo$basisConstruct
       N = length(RbasisCoefs[, k])
@@ -601,15 +601,13 @@ plot.mvBayes <- function(object,
       varBasis[k] = mean(coefs[, k]^2)
     }
   } else {
-    mseTrunc = sum(object$basisInfo$varExplained[object$basisInfo$nBasis:object$basisInfo$nMV])*(nrow(Ytest)-1)/nrow(Ytest)
+    mseTrunc = sum(object$basisInfo$varExplained[(object$basisInfo$nBasis + 1):object$basisInfo$nMV])*(nrow(Ytest)-1)/nrow(Ytest)
     for (k in 1:object$basisInfo$nBasis) {
       RbasisScaled[[k]] = t(t(outer(
         RbasisCoefs[idxPlot, k], object$basisInfo$basis[k, ]
       )) * object$basisInfo$Yscale) # all residuals
       mseBasis[k] = mean(RbasisScaled[[k]]^2)
-
-      basisScaled = t(t(outer(coefs[, k], object$basisInfo$basis[k, ])) * object$basisInfo$Yscale)
-      varBasis[k] = mean(basisScaled^2)
+      varBasis[k] = object$basisInfo$varExplained[k] * (nrow(Ytest)-1)/nrow(Ytest)
     }
   }
 
@@ -645,15 +643,17 @@ plot.mvBayes <- function(object,
 
   # R^2 plot
   r2Basis <- 1 - mseBasis / varBasis
-  varOverall <- mean(Ycentered^2)
+  varOverall <- sum(object$basisInfo$varExplained)*(nrow(Ytest)-1)/nrow(Ytest)
   r2Overall <- 1 - mseOverall / varOverall
 
   plot(
     1:object$basisInfo$nBasis,
     r2Basis,
+    ylim = range(r2Basis, r2Overall),
     pch = 19,
     xlab = "Component",
     ylab = expression(R^2),
+    xaxt = 'n',
     col = cmap[(1:object$basisInfo$nBasis - 1) %% 20 + 1],
     cex.lab = 0.9
   )
@@ -662,14 +662,16 @@ plot.mvBayes <- function(object,
     outer=FALSE,
     cex=0.85
   )
+  abline(
+    h = r2Overall,
+    col = "grey",
+    lty = 2
+  )
   axis(
     side = 1,
-    at = 1:(object$basisInfo$nBasis + 1),
-    labels = c(1:object$basisInfo$nBasis, 'T')
+    at = 1:(object$basisInfo$nBasis),
+    labels = 1:object$basisInfo$nBasis
   )
-  abline(h = r2Overall,
-         col = "grey",
-         lty = 2)
 
   # Residual variance plot
   mseTruncProp <- (object$basisInfo$varExplained[(object$basisInfo$nBasis + 1):object$basisInfo$nMV] /
@@ -680,9 +682,12 @@ plot.mvBayes <- function(object,
   plot(
     1:object$basisInfo$nBasis,
     100 * mseExplained,
+    xlim = c(1, object$basisInfo$nBasis + 1),
+    ylim = 100 * range(mseExplained, mseTruncCS),
     pch = 19,
     xlab = "Component",
     ylab = "%Residual Variance",
+    xaxt = 'n',
     col = cmap[(1:object$basisInfo$nBasis - 1) %% 20 + 1],
     cex.lab = 0.9
   )
@@ -691,6 +696,11 @@ plot.mvBayes <- function(object,
     100 * mseTruncCS,
     col = "grey",
     pch = 19
+  )
+  axis(
+    side = 1,
+    at = 1:(object$basisInfo$nBasis + 1),
+    labels = c(1:object$basisInfo$nBasis, 'T')
   )
 
   if (!is.null(title)) {

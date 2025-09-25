@@ -40,7 +40,7 @@ basisSetup = function(Y,
     pca = eigen(cov(Ystandard))
     basis = t(pca$vectors)
     coefs = Ystandard %*% t(basis)
-    out$varExplained = pca$values**2/(nrow(Y)-1)
+    out$varExplained = pca$values
   } else if (basisType == 'pns') {
     is_shapes_available <- requireNamespace("fdasrvf", quietly = TRUE)
     if (!is_shapes_available) {

@@ -26,7 +26,7 @@ mod = mvBayes(
   bass,
   X,
   Y,
-  nBasis=5
+  nBasis=3
 )
 plot(mod)
 plot(mod$basisInfo, idxMV = tt, xlabel = "tt")  # Plot PCA decomposition
