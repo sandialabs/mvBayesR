@@ -644,7 +644,12 @@ plot.mvBayes <- function(object,
   # R^2 plot
   r2Basis <- 1 - mseBasis / varBasis
   varOverall <- sum(object$basisInfo$varExplained)*(nrow(Ytest)-1)/nrow(Ytest)
-  r2Overall <- 1 - mseOverall / varOverall
+
+  if (object$basisInfo$basisType == "pns") {
+    r2Overall <- 1 - (mseOverall / ncol(Ytest)) / varOverall
+  } else {
+    r2Overall <- 1 - mseOverall / varOverall
+  }
 
   plot(
     1:object$basisInfo$nBasis,
