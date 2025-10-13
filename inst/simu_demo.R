@@ -36,10 +36,10 @@ warp_list = multiple_align_functions(
   verbose = FALSE
 )
 gam_sim = warp_list$warping_functions
-psi_sim = gam_to_v(warp_list$warping_functions)
+psi_sim = gam_to_psi(warp_list$warping_functions)
 ftilde_sim = warp_list$fn
 
-psi_obs = gam_to_v(seq(0, 1, length.out=M))
+psi_obs = gam_to_psi(seq(0, 1, length.out=M))
 gam_obs = seq(0, 1, length.out=M)
 ftilde_obs = f_exp
 

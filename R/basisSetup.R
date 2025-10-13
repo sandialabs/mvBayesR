@@ -68,7 +68,7 @@ basisSetup = function(Y,
     basis = array(0, dim = c(out$nMV, out$nMV))
 
     out$basisConstruct = basisConstruct
-    out$varExplained = basisConstruct$percent / 100
+    out$varExplained = apply(coefs^2, 2, mean)
     out$radius = radius
 
   } else if (basisType %in% c('legendre', 'bspline', 'splinet', 'custom')) {

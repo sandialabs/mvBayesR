@@ -546,7 +546,12 @@ plot.mvBayes <- function(object,
   par(mfrow = c(2, 2), mar = c(5, 5, 1, 1), oma = c(0, 0, 2, 0))
 
   # Residuals plot
-  mseOverall <- mean(R^2) * ncol(Ytest)
+  mseOverall <- mean(R^2)
+  if (object$basisInfo$basisType == "pns") {
+    mseTotal <- mseOverall
+  } else {
+    mseTotal <- mseOverall * ncol(Ytest)
+  }
   if (length(object$basisInfo$Ycenter) == 1 &
       length(object$basisInfo$Yscale) == 1) {
     legendLab = "Y"
@@ -566,7 +571,7 @@ plot.mvBayes <- function(object,
     cex.lab = 0.9
   )
   mtext(
-    sprintf("Overall MSE = %.4g", mseOverall/ncol(Ytest)),
+    sprintf("Overall MSE = %.4g", mseOverall),
     cex=0.85
   )
   matlines(idxMV,
@@ -588,8 +593,10 @@ plot.mvBayes <- function(object,
   RbasisScaled <- list()
   mseBasis <- numeric(object$basisInfo$nBasis)
   varBasis <- numeric(object$basisInfo$nBasis)
+  idxTruncEnd <- max(object$basisInfo$nBasis + 1, length(object$basisInfo$varExplained))
+  varExplainedTrunc <- object$basisInfo$varExplained[(object$basisInfo$nBasis + 1):idxTruncEnd]
   if (object$basisInfo$basisType == "pns") {
-    mseTrunc = sum(object$basisInfo$varExplained[(object$basisInfo$nBasis + 1):object$basisInfo$nMV])
+    mseTrunc = sum(varExplainedTrunc, na.rm=TRUE)
     for (k in 1:object$basisInfo$nBasis) {
       PNS = object$basisInfo$basisConstruct
       N = length(RbasisCoefs[, k])
@@ -601,12 +608,12 @@ plot.mvBayes <- function(object,
       varBasis[k] = mean(coefs[, k]^2)
     }
   } else {
-    mseTrunc = sum(object$basisInfo$varExplained[(object$basisInfo$nBasis + 1):object$basisInfo$nMV])*(nrow(Ytest)-1)/nrow(Ytest)
+    mseTrunc = sum(varExplainedTrunc, na.rm=TRUE)*(nrow(Ytest)-1)/nrow(Ytest)
     for (k in 1:object$basisInfo$nBasis) {
       RbasisScaled[[k]] = t(t(outer(
         RbasisCoefs[idxPlot, k], object$basisInfo$basis[k, ]
       )) * object$basisInfo$Yscale) # all residuals
-      mseBasis[k] = mean(RbasisScaled[[k]]^2)
+      mseBasis[k] = mean(RbasisScaled[[k]]^2) * ncol(Ytest)
       varBasis[k] = object$basisInfo$varExplained[k] * (nrow(Ytest)-1)/nrow(Ytest)
     }
   }
@@ -644,12 +651,7 @@ plot.mvBayes <- function(object,
   # R^2 plot
   r2Basis <- 1 - mseBasis / varBasis
   varOverall <- sum(object$basisInfo$varExplained)*(nrow(Ytest)-1)/nrow(Ytest)
-
-  if (object$basisInfo$basisType == "pns") {
-    r2Overall <- 1 - (mseOverall / ncol(Ytest)) / varOverall
-  } else {
-    r2Overall <- 1 - mseOverall / varOverall
-  }
+  r2Overall <- 1 - mseTotal / varOverall
 
   plot(
     1:object$basisInfo$nBasis,
@@ -679,10 +681,13 @@ plot.mvBayes <- function(object,
   )
 
   # Residual variance plot
-  mseTruncProp <- (object$basisInfo$varExplained[(object$basisInfo$nBasis + 1):object$basisInfo$nMV] /
-                     sum(object$basisInfo$varExplained[(object$basisInfo$nBasis + 1):object$basisInfo$nMV]))
-  mseTruncCS <- cumsum(mseTruncProp * mseTrunc / mseOverall)
-  mseExplained = mseBasis / mseOverall
+  if (sum(varExplainedTrunc, na.rm=TRUE) == 0) {
+    mseTruncCS = 0
+  } else {
+    mseTruncProp <- varExplainedTrunc / sum(varExplainedTrunc, na.rm=TRUE)
+    mseTruncCS <- cumsum(mseTruncProp * mseTrunc / mseTotal)
+  }
+  mseExplained = mseBasis / mseTotal
 
   plot(
     1:object$basisInfo$nBasis,
