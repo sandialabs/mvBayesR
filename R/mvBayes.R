@@ -613,7 +613,7 @@ plot.mvBayes <- function(object,
       RbasisScaled[[k]] = t(t(outer(
         RbasisCoefs[idxPlot, k], object$basisInfo$basis[k, ]
       )) * object$basisInfo$Yscale) # all residuals
-      mseBasis[k] = mean(RbasisScaled[[k]]^2) * ncol(Ytest)
+      mseBasis[k] = mean(RbasisCoefs[, k]^2)
       varBasis[k] = object$basisInfo$varExplained[k] * (nrow(Ytest)-1)/nrow(Ytest)
     }
   }
