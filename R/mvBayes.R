@@ -606,7 +606,7 @@ plot.mvBayes <- function(object,
       basisScaled = as.matrix(fdasrvf:::fastPNSe2s(inmat, PNS)) * object$basisInfo$radius
       RbasisScaled[[k]] = Ytest - basisScaled
       mseBasis[k] = mean(RbasisCoefs[, k]^2)
-      varBasis[k] = mean(coefs[, k]^2)
+      varBasis[k] = object$basisInfo$varExplained[k]
     }
   } else {
     mseTrunc = sum(varExplainedTrunc, na.rm=TRUE)*(nrow(Ytest)-1)/nrow(Ytest)
