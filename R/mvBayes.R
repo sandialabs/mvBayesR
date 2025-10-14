@@ -597,6 +597,7 @@ plot.mvBayes <- function(object,
   varExplainedTrunc <- object$basisInfo$varExplained[(object$basisInfo$nBasis + 1):idxTruncEnd]
   if (object$basisInfo$basisType == "pns") {
     mseTrunc = sum(varExplainedTrunc, na.rm=TRUE)
+    varTotal <- sum(object$basisInfo$varExplained)
     for (k in 1:object$basisInfo$nBasis) {
       PNS = object$basisInfo$basisConstruct
       N = length(RbasisCoefs[, k])
@@ -609,6 +610,7 @@ plot.mvBayes <- function(object,
     }
   } else {
     mseTrunc = sum(varExplainedTrunc, na.rm=TRUE)*(nrow(Ytest)-1)/nrow(Ytest)
+    varTotal <- sum(object$basisInfo$varExplained)*(nrow(Ytest)-1)/nrow(Ytest)
     for (k in 1:object$basisInfo$nBasis) {
       RbasisScaled[[k]] = t(t(outer(
         RbasisCoefs[idxPlot, k], object$basisInfo$basis[k, ]
@@ -650,8 +652,7 @@ plot.mvBayes <- function(object,
 
   # R^2 plot
   r2Basis <- 1 - mseBasis / varBasis
-  varOverall <- sum(object$basisInfo$varExplained)*(nrow(Ytest)-1)/nrow(Ytest)
-  r2Overall <- 1 - mseTotal / varOverall
+  r2Overall <- 1 - mseTotal / varTotal
 
   plot(
     1:object$basisInfo$nBasis,
