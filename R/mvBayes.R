@@ -714,10 +714,10 @@ plot.mvBayes <- function(object,
       at = 1:(object$basisInfo$nBasis + 1),
       labels = c(1:object$basisInfo$nBasis, 'T')
     )
+  }
 
-    if (!is.null(title)) {
-      mtext(title, outer = TRUE, font = 2) # Add title
-    }
+  if (!is.null(title)) {
+    mtext(title, outer = TRUE, font = 2) # Add title
   }
 
   # Save or display plot
