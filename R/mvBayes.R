@@ -682,40 +682,42 @@ plot.mvBayes <- function(object,
   )
 
   # Residual variance plot
-  if (sum(varExplainedTrunc, na.rm=TRUE) == 0) {
-    mseTruncCS = 0
-  } else {
-    mseTruncProp <- varExplainedTrunc / sum(varExplainedTrunc, na.rm=TRUE)
-    mseTruncCS <- cumsum(mseTruncProp * mseTrunc / mseTotal)
-  }
-  mseExplained = mseBasis / mseTotal
+  if (object$basisInfo$basisType != "pns") {
+    if (sum(varExplainedTrunc, na.rm=TRUE) == 0) {
+      mseTruncCS = 0
+    } else {
+      mseTruncProp <- varExplainedTrunc / sum(varExplainedTrunc, na.rm=TRUE)
+      mseTruncCS <- cumsum(mseTruncProp * mseTrunc / mseTotal)
+    }
+    mseExplained = mseBasis / mseTotal
 
-  plot(
-    1:object$basisInfo$nBasis,
-    100 * mseExplained,
-    xlim = c(1, object$basisInfo$nBasis + 1),
-    ylim = 100 * range(mseExplained, mseTruncCS),
-    pch = 19,
-    xlab = "Component",
-    ylab = "%Residual Variance",
-    xaxt = 'n',
-    col = cmap[(1:object$basisInfo$nBasis - 1) %% 20 + 1],
-    cex.lab = 0.9
-  )
-  points(
-    rep(object$basisInfo$nBasis + 1, length(mseTruncCS)),
-    100 * mseTruncCS,
-    col = "grey",
-    pch = 19
-  )
-  axis(
-    side = 1,
-    at = 1:(object$basisInfo$nBasis + 1),
-    labels = c(1:object$basisInfo$nBasis, 'T')
-  )
+    plot(
+      1:object$basisInfo$nBasis,
+      100 * mseExplained,
+      xlim = c(1, object$basisInfo$nBasis + 1),
+      ylim = 100 * range(mseExplained, mseTruncCS),
+      pch = 19,
+      xlab = "Component",
+      ylab = "%Residual Variance",
+      xaxt = 'n',
+      col = cmap[(1:object$basisInfo$nBasis - 1) %% 20 + 1],
+      cex.lab = 0.9
+    )
+    points(
+      rep(object$basisInfo$nBasis + 1, length(mseTruncCS)),
+      100 * mseTruncCS,
+      col = "grey",
+      pch = 19
+    )
+    axis(
+      side = 1,
+      at = 1:(object$basisInfo$nBasis + 1),
+      labels = c(1:object$basisInfo$nBasis, 'T')
+    )
 
-  if (!is.null(title)) {
-    mtext(title, outer = TRUE, font = 2) # Add title
+    if (!is.null(title)) {
+      mtext(title, outer = TRUE, font = 2) # Add title
+    }
   }
 
   # Save or display plot
