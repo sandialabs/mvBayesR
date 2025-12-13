@@ -258,14 +258,13 @@ predict.mvBayes = function(object,
     inmat = matrix(0, length(PNS$PNS$radii), N)
     inmat[1:nBasis, ] = t(array(postCoefs, dim = c(N, nBasis)))
     YtruncStandard = fdasrvf:::fastPNSe2s(inmat, PNS)
-    if (nSamples == 1){
+    if (nSamples == 1) {
       YpostT = array(YtruncStandard, dim = c(n, q)) * object$basisInfo$radius
       YpostT = t(YpostT)
     } else {
       YpostT = array(YtruncStandard, dim = c(nSamples, n, q)) * object$basisInfo$radius
       YpostT = aperm(YpostT, c(3, 2, 1))
     }
-
     rm(YtruncStandard)
   } else {
     if (nSamples == 1){
@@ -496,10 +495,9 @@ plot.mvBayes <- function(object,
   }
 
   if (object$basisInfo$basisType == "pns") {
-    Ycentered = t(t(Ytest) - colMeans(Ytest))
-  } else {
-    Ycentered = t(t(Ytest) - object$basisInfo$Ycenter)
+    object$basisInfo$Ycenter = apply(.getY(object$basisInfo), 2, mean) # just for plot
   }
+  Ycentered = t(t(Ytest) - object$basisInfo$Ycenter)
 
   # Get predictions and residuals
   YpostObj <- predict(object,
@@ -517,7 +515,6 @@ plot.mvBayes <- function(object,
   coefsPred <- apply(postCoefs, 2:3, mean)
 
   R <- Ytest - Ypred
-  RbasisCoefs <- coefs - coefsPred
 
   cmap = c(
     "#1f77b4",
@@ -552,7 +549,7 @@ plot.mvBayes <- function(object,
   } else {
     mseTotal <- mseOverall * ncol(Ytest)
   }
-  if (length(object$basisInfo$Ycenter) == 1 &
+  if (length(object$basisInfo$Ycenter) == 1 &&
       length(object$basisInfo$Yscale) == 1) {
     legendLab = "Y"
   } else{
@@ -591,26 +588,31 @@ plot.mvBayes <- function(object,
 
   # Residual decomposition plot
   RbasisScaled <- list()
+  basisScaled <- list()
   mseBasis <- numeric(object$basisInfo$nBasis)
   varBasis <- numeric(object$basisInfo$nBasis)
   idxTruncEnd <- max(object$basisInfo$nBasis + 1, length(object$basisInfo$varExplained))
   varExplainedTrunc <- object$basisInfo$varExplained[(object$basisInfo$nBasis + 1):idxTruncEnd]
+  mseTrunc = mean(truncError^2)
+  if (all(is.na(varExplainedTrunc))) {
+    varExplainedTrunc <- mseTrunc
+  }
+  varTotal <- sum(object$basisInfo$varExplained)
   if (object$basisInfo$basisType == "pns") {
-    mseTrunc = sum(varExplainedTrunc, na.rm=TRUE)
-    varTotal <- sum(object$basisInfo$varExplained)
+    PNS = object$basisInfo$basisConstruct
     for (k in 1:object$basisInfo$nBasis) {
-      PNS = object$basisInfo$basisConstruct
-      N = length(RbasisCoefs[, k])
-      inmat = matrix(0, length(PNS$PNS$radii), N)
-      inmat[k, ] = coefsPred[, k]
-      basisScaled = as.matrix(fdasrvf:::fastPNSe2s(inmat, PNS)) * object$basisInfo$radius
-      RbasisScaled[[k]] = Ytest - basisScaled
-      mseBasis[k] = mean(RbasisCoefs[, k]^2)
+      inmat = inmatPred = matrix(0, length(PNS$PNS$radii), nrow(coefs))
+      inmat[k, ] = coefs[idxPlot, k]
+      basisScaled[[k]] = as.matrix(fdasrvf:::fastPNSe2s(inmat, PNS)) * object$basisInfo$radius
+      inmatPred[k, ] = coefsPred[idxPlot, k]
+      basisPredScaled = as.matrix(fdasrvf:::fastPNSe2s(inmatPred, PNS)) * object$basisInfo$radius
+      RbasisScaled[[k]] <- basisScaled[[k]] - basisPredScaled
+      mseBasis[k] = mean(RbasisScaled[[k]]^2)
       varBasis[k] = object$basisInfo$varExplained[k]
     }
   } else {
-    mseTrunc = sum(varExplainedTrunc, na.rm=TRUE)*(nrow(Ytest)-1)/nrow(Ytest)
-    varTotal <- sum(object$basisInfo$varExplained)*(nrow(Ytest)-1)/nrow(Ytest)
+    varTotal <- varTotal*(nrow(Ytest)-1)/nrow(Ytest)
+    RbasisCoefs <- coefs - coefsPred
     for (k in 1:object$basisInfo$nBasis) {
       RbasisScaled[[k]] = t(t(outer(
         RbasisCoefs[idxPlot, k], object$basisInfo$basis[k, ]
@@ -682,39 +684,37 @@ plot.mvBayes <- function(object,
   )
 
   # Residual variance plot
-  if (object$basisInfo$basisType != "pns") {
-    if (sum(varExplainedTrunc, na.rm=TRUE) == 0) {
-      mseTruncCS = 0
-    } else {
-      mseTruncProp <- varExplainedTrunc / sum(varExplainedTrunc, na.rm=TRUE)
-      mseTruncCS <- cumsum(mseTruncProp * mseTrunc / mseTotal)
-    }
-    mseExplained = mseBasis / mseTotal
-
-    plot(
-      1:object$basisInfo$nBasis,
-      100 * mseExplained,
-      xlim = c(1, object$basisInfo$nBasis + 1),
-      ylim = 100 * range(mseExplained, mseTruncCS),
-      pch = 19,
-      xlab = "Component",
-      ylab = "%Residual Variance",
-      xaxt = 'n',
-      col = cmap[(1:object$basisInfo$nBasis - 1) %% 20 + 1],
-      cex.lab = 0.9
-    )
-    points(
-      rep(object$basisInfo$nBasis + 1, length(mseTruncCS)),
-      100 * mseTruncCS,
-      col = "grey",
-      pch = 19
-    )
-    axis(
-      side = 1,
-      at = 1:(object$basisInfo$nBasis + 1),
-      labels = c(1:object$basisInfo$nBasis, 'T')
-    )
+  if (sum(varExplainedTrunc, na.rm=TRUE) == 0) {
+    mseTruncCS = 0
+  } else {
+    mseTruncProp <- varExplainedTrunc / sum(varExplainedTrunc, na.rm=TRUE)
+    mseTruncCS <- cumsum(mseTruncProp * mseTrunc / mseTotal)
   }
+  mseExplained = mseBasis / mseTotal
+
+  plot(
+    1:object$basisInfo$nBasis,
+    100 * mseExplained,
+    xlim = c(1, object$basisInfo$nBasis + 1),
+    ylim = 100 * range(mseExplained, mseTruncCS),
+    pch = 19,
+    xlab = "Component",
+    ylab = "%Residual Variance",
+    xaxt = 'n',
+    col = cmap[(1:object$basisInfo$nBasis - 1) %% 20 + 1],
+    cex.lab = 0.9
+  )
+  points(
+    rep(object$basisInfo$nBasis + 1, length(mseTruncCS)),
+    100 * mseTruncCS,
+    col = "grey",
+    pch = 19
+  )
+  axis(
+    side = 1,
+    at = 1:(object$basisInfo$nBasis + 1),
+    labels = c(1:object$basisInfo$nBasis, 'T')
+  )
 
   if (!is.null(title)) {
     mtext(title, outer = TRUE, font = 2) # Add title
