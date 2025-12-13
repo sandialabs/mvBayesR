@@ -25,6 +25,10 @@ basisSetup = function(Y,
   out$Y = Y
   out$nMV = ncol(Y)
   out$basisType = basisType
+  if (out$basisType == "pns") {
+    center = FALSE
+    scale = FALSE
+  }
   out$Ycenter = 0
   out$Yscale = 1
   if (center) {
@@ -56,8 +60,13 @@ basisSetup = function(Y,
     varExplained.psi = pca$values
 
     cs.psi = cumsum(varExplained.psi) / sum(varExplained.psi)
-    n.pc = which(cs.psi >= 0.99)[1]
-    cli::cli_alert_info("Setting n.pc to {n.pc}...")
+    n.pc = which(cs.psi >= propVarExplained)[1]
+    if (!is.null(nBasis) && nBasis > n.pc) {
+      cli::cli_alert_info("Reducing computation to {n.pc} pns components...")
+      nBasis = n.pc
+    } else {
+      cli::cli_alert_info("Computing {n.pc} pns components...")
+    }
 
     basisConstruct = fdasrvf:::fastpns(pnsdat,
                                        n.pc = n.pc,
@@ -289,10 +298,27 @@ plot.basisSetup = function(object,
   )
 
   basisScaled = vector('list', nBasis)
-  for (k in 1:nBasis) {
-    basisScaled[[k]] = t(outer(object$coefs[idxPlot, k], object$basis[k, ])) * object$Yscale
+  if (object$basisType == "pns") {
+    PNS = object$basisConstruct
+    for (k in 1:nBasis) {
+      inmat = matrix(0, length(PNS$PNS$radii), nPlot)
+      inmat[k, ] = object$coefs[idxPlot, k]
+      basisScaled[[k]] = t(as.matrix(fdasrvf:::fastPNSe2s(inmat, PNS))) * object$radius
+    }
+  } else {
+    for (k in 1:nBasis) {
+      basisScaled[[k]] = t(outer(object$coefs[idxPlot, k], object$basis[k, ])) * object$Yscale
+    }
   }
-  ylim = range(basisScaled, object$truncError)
+  ylimBasis = range(basisScaled)
+  rgBasis = diff(ylimBasis)
+  ylimTrunc = range(object$truncError)
+  rgTrunc = diff(ylimTrunc)
+  if (rgBasis > rgTrunc) {
+    ylimTrunc = ylimTrunc + c(-1, 1) * (rgBasis - rgTrunc) / 2
+  } else {
+    ylimBasis = ylimBasis + c(-1, 1) * (rgTrunc - rgBasis) / 2
+  }
   for (k in 1:nBasis) {
     rgbCmap = grDevices::col2rgb(cmap[(k - 1) %% 20 + 1])
     col = grDevices::rgb(rgbCmap[1] / 255, rgbCmap[2] / 255, rgbCmap[3] / 255, alpha = 0.5)
@@ -303,7 +329,7 @@ plot.basisSetup = function(object,
       add = (k > 1),
       col = col,
       lty = 1,
-      ylim = ylim,
+      ylim = ylimBasis,
       ylab = "Basis Projection",
       xlab = xlabel,
       log = ifelse(xscale == "log", "x", ""),
@@ -319,7 +345,7 @@ plot.basisSetup = function(object,
     type = 'l',
     col = col,
     lty = 1,
-    ylim = ylim,
+    ylim = ylimTrunc,
     ylab = "Truncation Error",
     xlab = xlabel,
     cex.lab = 0.9,
