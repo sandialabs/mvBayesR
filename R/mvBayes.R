@@ -488,7 +488,7 @@ plot.mvBayes <- function(object,
     warning("nPlot should be at most n=len(Xtest) (or n=len(X) if Xtest is NULL). Using nPlot=n.")
     nPlot <- nrow(Xtest)
   }
-  idxPlot <- sample(nrow(Xtest), nPlot, replace = FALSE)
+  idxPlot <- sort(sample(nrow(Xtest), nPlot, replace = FALSE))
 
   if (is.null(idxMV)) {
     idxMV <- 1:object$basisInfo$nMV
@@ -572,7 +572,7 @@ plot.mvBayes <- function(object,
     cex=0.85
   )
   matlines(idxMV,
-           t(R),
+           t(R[idxPlot, , drop=FALSE]),
            lty = 1,
            col = grDevices::rgb(0, 0, 0, alpha = 0.5))
   legend(
@@ -588,7 +588,6 @@ plot.mvBayes <- function(object,
 
   # Residual decomposition plot
   RbasisScaled <- list()
-  basisScaled <- list()
   mseBasis <- numeric(object$basisInfo$nBasis)
   varBasis <- numeric(object$basisInfo$nBasis)
   idxTruncEnd <- max(object$basisInfo$nBasis + 1, length(object$basisInfo$varExplained))
@@ -602,11 +601,11 @@ plot.mvBayes <- function(object,
     PNS = object$basisInfo$basisConstruct
     for (k in 1:object$basisInfo$nBasis) {
       inmat = inmatPred = matrix(0, length(PNS$PNS$radii), nrow(coefs))
-      inmat[k, ] = coefs[idxPlot, k]
-      basisScaled[[k]] = as.matrix(fdasrvf:::fastPNSe2s(inmat, PNS)) * object$basisInfo$radius
-      inmatPred[k, ] = coefsPred[idxPlot, k]
+      inmat[k, ] = coefs[, k]
+      basisScaled = as.matrix(fdasrvf:::fastPNSe2s(inmat, PNS)) * object$basisInfo$radius
+      inmatPred[k, ] = coefsPred[, k]
       basisPredScaled = as.matrix(fdasrvf:::fastPNSe2s(inmatPred, PNS)) * object$basisInfo$radius
-      RbasisScaled[[k]] <- basisScaled[[k]] - basisPredScaled
+      RbasisScaled[[k]] <- basisScaled - basisPredScaled
       mseBasis[k] = mean(RbasisScaled[[k]]^2)
       varBasis[k] = object$basisInfo$varExplained[k]
     }
@@ -615,7 +614,7 @@ plot.mvBayes <- function(object,
     RbasisCoefs <- coefs - coefsPred
     for (k in 1:object$basisInfo$nBasis) {
       RbasisScaled[[k]] = t(t(outer(
-        RbasisCoefs[idxPlot, k], object$basisInfo$basis[k, ]
+        RbasisCoefs[, k], object$basisInfo$basis[k, ]
       )) * object$basisInfo$Yscale) # all residuals
       mseBasis[k] = mean(RbasisCoefs[, k]^2)
       varBasis[k] = object$basisInfo$varExplained[k] * (nrow(Ytest)-1)/nrow(Ytest)
@@ -643,7 +642,7 @@ plot.mvBayes <- function(object,
     col = grDevices::rgb(rgbCmap[1] / 255, rgbCmap[2] / 255, rgbCmap[3] / 255, alpha = 0.5)
     matlines(
       idxMV,
-      t(RbasisScaled[[k]]),
+      t(RbasisScaled[[k]][idxPlot, , drop=FALSE]),
       type = 'l',
       col = col,
       lty = 1,

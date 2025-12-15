@@ -249,7 +249,7 @@ plot.basisSetup = function(object,
   }
 
   if (nPlot < n) {
-    idxPlot = sample(n, nPlot)
+    idxPlot = sort(sample(n, nPlot))
   } else{
     idxPlot = 1:n
   }
