@@ -196,7 +196,14 @@ mvSobol = function (object,
       }
     }
 
-    tmp = t(replicate(p, c(varTotal)))
+    # Truncate at zero (machine precision can give negative values)
+    firstOrder[firstOrder < 0] <- 0
+
+    # Ensure total variance >= sum of first order terms
+    firstOrderSum = apply(apply(firstOrder, 2:3, mean), 2, sum)
+    varTotal = apply(rbind(varTotal, firstOrderSum), 2, max)
+
+    # tmp = t(replicate(p, c(varTotal)))
     out = list(
       firstOrderSobol = firstOrder,
       totalOrderSobol = totalOrder,
@@ -302,6 +309,7 @@ plot.sobol = function(object,
   }
 
   firstOrder = apply(object$firstOrderSobol, c(2, 3), mean)
+
   firstOrderRel = t(t(firstOrder) / object$varTotal)
 
   par(
@@ -383,7 +391,7 @@ plot.sobol = function(object,
       rep(0, object$nMV),
       type = "l",
       col = cmap[1],
-      ylim = c(0, max(sensVar) + 3),
+      ylim = c(0, max(sensVar)*1.1),
       xlim = c(min(idxMV), max(idxMV)),
       log = ifelse(xscale == 'log', 'x', ''),
       xlab = xlabel,
@@ -406,7 +414,7 @@ plot.sobol = function(object,
       xlab = xlabel,
       ylab = "First-Order Sobol' Index",
       log = ifelse(xscale == 'log', 'x', ''),
-      ylim = c(0, max(firstOrder) * 1.05),
+      ylim = c(0, max(firstOrder)*1.1),
       xlim = c(min(idxMV), max(idxMV))
     )
     for (j in 2:p) {
