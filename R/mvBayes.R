@@ -515,6 +515,7 @@ plot.mvBayes <- function(object,
   coefsPred <- apply(postCoefs, 2:3, mean)
 
   R <- Ytest - Ypred
+  RbasisCoefs <- coefs - coefsPred
 
   cmap = c(
     "#1f77b4",
@@ -539,8 +540,10 @@ plot.mvBayes <- function(object,
     "#9edae5"
   )
 
+
   # Create plot
   par(mfrow = c(2, 2), mar = c(5, 5, 1, 1), oma = c(0, 0, 2, 0))
+
 
   # Residuals plot
   mseOverall <- mean(R^2)
@@ -586,6 +589,7 @@ plot.mvBayes <- function(object,
     bg = grDevices::rgb(1, 1, 1, 0.2)
   )
 
+
   # Residual decomposition plot
   RbasisScaled <- list()
   mseBasis <- numeric(object$basisInfo$nBasis)
@@ -606,13 +610,12 @@ plot.mvBayes <- function(object,
       inmatPred[k, ] = coefsPred[, k]
       basisPredScaled = as.matrix(fdasrvf:::fastPNSe2s(inmatPred, PNS)) * object$basisInfo$radius
       RbasisScaled[[k]] <- basisScaled - basisPredScaled
-      mseBasis[k] = mean(RbasisScaled[[k]]^2)
-      varBasis[k] = object$basisInfo$varExplained[k]
+      mseBasis[k] = mean(RbasisCoefs[, k]^2)
+      varBasis[k] = mean(coefs[, k]^2)
     }
   } else {
     mseTrunc <- mseTrunc * ncol(Ytest)
     varTotal <- sum(object$basisInfo$varExplained)*(nrow(Ytest)-1)/nrow(Ytest)
-    RbasisCoefs <- coefs - coefsPred
     for (k in 1:object$basisInfo$nBasis) {
       RbasisScaled[[k]] = t(t(outer(
         RbasisCoefs[, k], object$basisInfo$basis[k, ]
@@ -652,6 +655,7 @@ plot.mvBayes <- function(object,
     )
   }
 
+
   # R^2 plot
   r2Basis <- 1 - mseBasis / varBasis
   r2Overall <- 1 - mseTotal / varTotal
@@ -682,6 +686,7 @@ plot.mvBayes <- function(object,
     at = 1:(object$basisInfo$nBasis),
     labels = 1:object$basisInfo$nBasis
   )
+
 
   # Residual variance plot
   if (sum(varExplainedTrunc, na.rm=TRUE) == 0) {
