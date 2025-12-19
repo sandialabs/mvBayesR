@@ -10,7 +10,7 @@ basisSetup(
   customBasis = NULL,
   nBasis = NULL,
   propVarExplained = 0.99,
-  center = NULL,
+  center = TRUE,
   scale = FALSE
 )
 }

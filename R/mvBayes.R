@@ -610,6 +610,7 @@ plot.mvBayes <- function(object,
       varBasis[k] = object$basisInfo$varExplained[k]
     }
   } else {
+    mseTrunc <- mseTrunc * ncol(Ytest)
     varTotal <- sum(object$basisInfo$varExplained)*(nrow(Ytest)-1)/nrow(Ytest)
     RbasisCoefs <- coefs - coefsPred
     for (k in 1:object$basisInfo$nBasis) {
