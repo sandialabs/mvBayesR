@@ -184,9 +184,10 @@ getCoefs.basisSetup = function(object, Ytest = NULL) {
   } else{
     if (object$basisType == "pns") {
       stop("getCoefs not implemented for 'pns' basisType")
-      PNS <- object$basisConstruct$PNS
-      coefsTest = t(fdasrvf:::PNSs2e(t(Ytest), PNS)) # TODO: doesn't work
-      return(coefsTest)
+      # TODO: the following doesn't work
+      # PNS <- object$basisConstruct$PNS
+      # coefsTest = t(fdasrvf:::PNSs2e(t(Ytest), PNS))
+      # return(coefsTest)
     } else {
       YtestStandard = t((t(Ytest) - object$Ycenter) / object$Yscale)
       return(YtestStandard %*% t(object$basis))
