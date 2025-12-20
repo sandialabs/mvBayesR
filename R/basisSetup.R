@@ -183,18 +183,7 @@ getCoefs.basisSetup = function(object, Ytest = NULL) {
     return(object$coefs)
   } else{
     if (object$basisType == "pns") {
-      PNS <- object$basisConstruct$PNS
-      muhat <- object$basisConstruct$muhat
-      pca <- object$basisConstruct$pca
-      n.pc <- object$basisConstruct$n.pc
-      pnsdat <- apply(t(Ytest), 2, normalize_column)
-      Xs <- pnsdat
-      n = ncol(pnsdat)
-      for (i in 1:n) {
-        pnsdat[,i] <- pnsdat[,i] - sum(pnsdat[,i] * muhat) * muhat
-      }
-      ans = fdasrvf:::pcscore2sphere3(n.pc, muhat, t(Xs), pnsdat, pca$rotation)
-      coefsTest = t(fdasrvf:::PNSs2e(t(ans), PNS))
+      coefsTest = t(fdasrvf:::fastPNSs2e(t(Ytest), object$basisConstruct))
       return(coefsTest[,1:object$nBasis, drop = FALSE])
     } else {
       YtestStandard = t((t(Ytest) - object$Ycenter) / object$Yscale)
