@@ -8,9 +8,10 @@ mvCV(
   bayesModel,
   X,
   Y,
+  kFolds = NULL,
+  nRep = 1,
   nTrain = NULL,
   nTest = NULL,
-  nRep = 1,
   seed = NULL,
   coverageTarget = 0.95,
   idxSamples = "all",
@@ -25,11 +26,13 @@ mvCV(
 
 \item{Y}{A response matrix of dimension nxq, where q is the number of multivariate/functional responses.}
 
-\item{nTrain}{Number of examples to use in the training set. If NULL, nTrain = n - nTest; unless nTest is also NULL, in which case nTrain = ceiling(n/2).}
+\item{kFolds}{Number of test sets to partition data. If kFolds=NULL (default), test sets are instead formed by random sample, via the nReps, nTrain, and nTest arguments.}
 
-\item{nTest}{Number of examples to use in the test set. If NULL, nTest = n - nTrain.}
+\item{nRep}{Number of repetitions of CV process. Only used when kFolds=NULL (default).}
 
-\item{nRep}{Number of repetitions of CV process.}
+\item{nTrain}{Number of examples to use in the training set. Only used when kFolds=NULL (default). If nTrain=NULL, nTrain is set to n - nTest; unless nTest is also NULL, in which case nTrain is set to ceiling(n/2).}
+
+\item{nTest}{Number of examples to use in the test set. Only used when kFolds=NULL (default). If nTest=NULL, nTest is set to n - nTrain.}
 
 \item{seed}{Randomization seed, for replication of the train/test split. The seed is un-initialized immediately after assigning the train/test split. If NULL, no seed is set.}
 

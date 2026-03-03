@@ -4,9 +4,10 @@
 #' @param bayesModel A Bayesian regression model-fitting function, with first argument taking an nxp input matrix or data.frame, and second argument taking an n-vector of numeric responses.
 #' @param X A matrix of predictors of dimension nxp, where n is the total number of examples (including training and test sets) and p is the number of inputs (features).
 #' @param Y A response matrix of dimension nxq, where q is the number of multivariate/functional responses.
-#' @param nTrain Number of examples to use in the training set. If NULL, nTrain = n - nTest; unless nTest is also NULL, in which case nTrain = ceiling(n/2).
-#' @param nTest Number of examples to use in the test set. If NULL, nTest = n - nTrain.
-#' @param nRep Number of repetitions of CV process.
+#' @param kFolds Number of test sets to partition data. If kFolds=NULL (default), test sets are instead formed by random sample, via the nReps, nTrain, and nTest arguments.
+#' @param nRep Number of repetitions of CV process. Only used when kFolds=NULL (default).
+#' @param nTrain Number of examples to use in the training set. Only used when kFolds=NULL (default). If nTrain=NULL, nTrain is set to n - nTest; unless nTest is also NULL, in which case nTrain is set to ceiling(n/2).
+#' @param nTest Number of examples to use in the test set. Only used when kFolds=NULL (default). If nTest=NULL, nTest is set to n - nTrain.
 #' @param seed Randomization seed, for replication of the train/test split. The seed is un-initialized immediately after assigning the train/test split. If NULL, no seed is set.
 #' @param coverageTarget level of coverage desired (default: 0.95)
 #' @param idxSamples which samples to use in CV (default: "all")
@@ -20,14 +21,17 @@
 mvCV = function(bayesModel,
                      X,
                      Y,
+                     kFolds = NULL,
+                     nRep = 1,
                      nTrain = NULL,
                      nTest = NULL,
-                     nRep = 1,
                      seed = NULL,
                      coverageTarget = 0.95,
                      idxSamples = "all",
                      uqTruncMethod = c("gaussian", "empirical"),
                      ...) {
+  set.seed(seed)
+
   # setup
   n = nrow(X)
   p = ncol(X)
@@ -37,34 +41,45 @@ mvCV = function(bayesModel,
 
   uqTruncMethod = uqTruncMethod[1]
 
-  if (is.null(nTest)) {
-    if (is.null(nTrain)) {
-      nTest = floor(n / 2) # half in test set
-      nTrain = n - nTest
-    } else if (nTrain >= n) {
-      stop('Must have nTrain < nrow(X)')
+  if (is.null(kFolds)) {
+    if (is.null(nTest)) {
+      if (is.null(nTrain)) {
+        nTest = floor(n / 2) # half in test set
+        nTrain = n - nTest
+      } else if (nTrain >= n) {
+        stop('Must have nTrain < nrow(X)')
+      } else{
+        nTest = n - nTrain
+      }
     } else{
-      nTest = n - nTrain
+      if (nTest >= n) {
+        stop('Must have nTest < nrow(X)')
+      } else if (is.null(nTrain)) {
+        nTrain = n - nTest
+      } else if (nTrain + nTest > n) {
+        stop('Must have nTrain + nTest <= n')
+      }
     }
-  } else{
-    if (nTest >= n) {
-      stop('Must have nTest < nrow(X)')
-    } else if (is.null(nTrain)) {
-      nTrain = n - nTest
-    } else if (nTrain + nTest > n) {
-      stop('Must have nTrain + nTest <= n')
-    }
+
+    # Get fold indices
+    idxTest = lapply(1:nRep, function(r)
+      sample(n, size = nTest)) # different test set for every rep
+    nTest = rep(nTest, nRep)
+    nTrain = n - nTest
+    idxRemaining = lapply(idxTest, function(idx)
+      setdiff(1:n, idx)) # remaining indices after test set is determined
+    idxTrain = lapply(1:nRep, function(r)
+      sample(idxRemaining[[r]], size = nTrain[r])) # training set for each rep
+    rm(idxRemaining)
+  } else {
+    nRep = kFolds
+    idxTest = split(1:n, rep_len(1:kFolds, n))
+    nTest = sapply(idxTest, length)
+    nTrain = n - nTest
+    idxTrain = lapply(idxTest, function(idx)
+      setdiff(1:n, idx)) # remaining indices after test set is determined
   }
 
-  # Get fold indices
-  set.seed(seed)
-  idxTest = sapply(1:nRep, function(r)
-    sample(n, size = nTest)) # different test set for every rep
-  idxRemaining = apply(idxTest, 2, function(idx)
-    setdiff(1:n, idx)) # remaining indices after test set is determined
-  idxTrain = apply(idxRemaining, 2, function(idx)
-    sample(idx, size = nTrain)) # training set for each rep
-  rm(idxRemaining)
   set.seed(NULL) # re-set as if no seed had been set
 
 
@@ -72,16 +87,16 @@ mvCV = function(bayesModel,
   rmse = rSquared = coverage = intervalWidth = intervalScore = fitTime = predictTime = numeric(nRep)
   for (r in 1:nRep) {
     # Set up train/test split
-    Xtrain = X[idxTrain[, r], ]
-    Ytrain = Y[idxTrain[, r], ]
+    Xtrain = X[idxTrain[[r]], ]
+    Ytrain = Y[idxTrain[[r]], ]
 
-    Xtest = X[idxTest[, r], ]
-    Ytest = Y[idxTest[, r], ]
+    Xtest = X[idxTest[[r]], ]
+    Ytest = Y[idxTest[[r]], ]
 
     # Fit models
     if (methods::hasArg("warp_data")) {
       startFit = Sys.time()
-      fit = mvBayesElastic(bayesModel, Xtrain, Ytrain, idx = idxTrain[, r], ...)
+      fit = mvBayesElastic(bayesModel, Xtrain, Ytrain, idx = idxTrain[[r]], ...)
       fitTime[r] = as.numeric(Sys.time() - startFit, units = "secs")
     } else {
       startFit = Sys.time()
@@ -107,15 +122,15 @@ mvCV = function(bayesModel,
         id = fit$basisInfo$basisConstruct$id
         srvf = fit$basisInfo$basisConstruct$srvf
         if (srvf) {
-          m_new = sign(eval(tmp$warp_data, envir = call.envir)$fn[id, idxTest[, r]]) * sqrt(abs(eval(tmp$warp_data, envir =
-                                                                                                       call.envir)$fn[id, idxTest[, r]]))
+          m_new = sign(eval(tmp$warp_data, envir = call.envir)$fn[id, idxTest[[r]]]) * sqrt(abs(eval(tmp$warp_data, envir =
+                                                                                                       call.envir)$fn[id, idxTest[[r]]]))
           qn = fdasrvf::f_to_srvf(
-            eval(tmp$warp_data, envir = call.envir)$fn[, idxTest[, r]],
+            eval(tmp$warp_data, envir = call.envir)$fn[, idxTest[[r]]],
             fit$basisInfo$basisConstruct$time
           )
           qn1 = rbind(qn, m_new)
         } else {
-          qn1 = eval(tmp$warp_data, envir = call.envir)$fn[, idxTest[, r]]
+          qn1 = eval(tmp$warp_data, envir = call.envir)$fn[, idxTest[[r]]]
         }
 
         time = seq(0, 1, length.out = ncol(Ytest))
@@ -124,7 +139,7 @@ mvCV = function(bayesModel,
         vec = matrix(0, ncol(Ytest), nrow(Ytest))
         for (i in 1:nrow(Ytest)) {
           psi[, i] = sqrt(fdasrvf::gradient(
-            eval(tmp$warp_data, envir = call.envir)$warping_functions[, idxTest[i, r]],
+            eval(tmp$warp_data, envir = call.envir)$warping_functions[, idxTest[[r]][i]],
             binsize
           ))
           vec[, i] <- fdasrvf::inv_exp_map(fit$basisInfo$basisConstruct$mu_psi, psi[, i])
@@ -137,18 +152,18 @@ mvCV = function(bayesModel,
         id = fit$basisInfo$basisConstruct$id
         srvf = fit$basisInfo$basisConstruct$srvf
         if (srvf) {
-          m_new = sign(eval(tmp$warp_data, envir = call.envir)$fn[id, idxTest[, r]]) * sqrt(abs(eval(tmp$warp_data, envir =
-                                                                                                       call.envir)$fn[id, idxTest[, r]]))
+          m_new = sign(eval(tmp$warp_data, envir = call.envir)$fn[id, idxTest[[r]]]) * sqrt(abs(eval(tmp$warp_data, envir =
+                                                                                                       call.envir)$fn[id, idxTest[[r]]]))
           qn = fdasrvf::f_to_srvf(
-            eval(tmp$warp_data, envir = call.envir)$fn[, idxTest[, r]],
+            eval(tmp$warp_data, envir = call.envir)$fn[, idxTest[[r]]],
             fit$basisInfo$basisConstruct$time
           )
           qn1 = rbind(qn, m_new)
         } else {
-          qn1 = eval(tmp$warp_data, envir = call.envir)$fn[, idxTest[, r]]
+          qn1 = eval(tmp$warp_data, envir = call.envir)$fn[, idxTest[[r]]]
         }
 
-        h = fdasrvf::gam_to_h(eval(tmp$warp_data, envir = call.envir)$warping_functions[, idxTest[, r]])
+        h = fdasrvf::gam_to_h(eval(tmp$warp_data, envir = call.envir)$warping_functions[, idxTest[[r]]])
 
         Ytest = t(rbind(qn1, C * h))
 
@@ -162,7 +177,7 @@ mvCV = function(bayesModel,
       truncErrorVar = cov(fit$basisInfo$truncError)
       truncError = array(MASS::mvrnorm(prod(dim(preds)[1:2]), rep(0, dim(preds)[3]), truncErrorVar), dim = dim(preds))
     } else if (uqTruncMethod == "empirical") {
-      idxResample = sample(nTrain, size = prod(dim(preds)[1:2]), replace = TRUE)
+      idxResample = sample(nTrain[r], size = prod(dim(preds)[1:2]), replace = TRUE)
       truncError = aperm(array(t(fit$basisInfo$truncError[idxResample, ]), dim =
                                  dim(preds)[c(3, 1, 2)]), c(2, 3, 1))
     }
