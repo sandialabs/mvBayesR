@@ -481,6 +481,7 @@ plot.mvBayes <- function(object,
     Ytrunc <- getYtrunc(object$basisInfo, coefs = coefs)
     truncError <- Ytest - Ytrunc
   }
+  truncErrorScaled <- t(t(truncError) / object$basisInfo$Yscale)
 
   if (is.null(nPlot)) {
     nPlot <- min(nrow(Xtest), 1000)
@@ -515,6 +516,7 @@ plot.mvBayes <- function(object,
   coefsPred <- apply(postCoefs, 2:3, mean)
 
   R <- Ytest - Ypred
+  Rscaled <- t(t(R) / object$basisInfo$Yscale)
   RbasisCoefs <- coefs - coefsPred
 
   cmap = c(
@@ -546,7 +548,7 @@ plot.mvBayes <- function(object,
 
 
   # Residuals plot
-  mseOverall <- mean(R^2)
+  mseOverall <- mean(Rscaled^2)
   if (object$basisInfo$basisType == "pns") {
     mseTotal <- mseOverall
   } else {
@@ -592,16 +594,16 @@ plot.mvBayes <- function(object,
 
   # Residual decomposition plot
   RbasisScaled <- list()
-  mseBasis <- numeric(object$basisInfo$nBasis)
-  varBasis <- numeric(object$basisInfo$nBasis)
+  mseBasis <- apply(RbasisCoefs^2, 2, mean)
+  varBasis <- apply(coefs^2, 2, mean)
   idxTruncEnd <- max(object$basisInfo$nBasis + 1, length(object$basisInfo$varExplained))
   varExplainedTrunc <- object$basisInfo$varExplained[(object$basisInfo$nBasis + 1):idxTruncEnd]
-  mseTrunc = mean(truncError^2)
+  mseTrunc = mean(truncErrorScaled^2)
+  varTotal = mean(t((t(Ytest) - object$basisInfo$Ycenter) / object$basisInfo$Yscale)^2)
   if (all(is.na(varExplainedTrunc))) {
     varExplainedTrunc <- mseTrunc
   }
   if (object$basisInfo$basisType == "pns") {
-    varTotal = mean(t(t(Ytest) - object$basisInfo$Ycenter)^2)
     PNS = object$basisInfo$basisConstruct
     for (k in 1:object$basisInfo$nBasis) {
       inmat = inmatPred = matrix(0, length(PNS$PNS$radii), nrow(coefs))
@@ -610,18 +612,14 @@ plot.mvBayes <- function(object,
       inmatPred[k, ] = coefsPred[, k]
       basisPredScaled = as.matrix(fdasrvf:::fastPNSe2s(inmatPred, PNS)) * object$basisInfo$radius
       RbasisScaled[[k]] <- basisScaled - basisPredScaled
-      mseBasis[k] = mean(RbasisCoefs[, k]^2)
-      varBasis[k] = mean(coefs[, k]^2)
     }
   } else {
     mseTrunc <- mseTrunc * ncol(Ytest)
-    varTotal <- sum(object$basisInfo$varExplained)*(nrow(Ytest)-1)/nrow(Ytest)
+    varTotal <- varTotal * ncol(Ytest)
     for (k in 1:object$basisInfo$nBasis) {
       RbasisScaled[[k]] = t(t(outer(
         RbasisCoefs[, k], object$basisInfo$basis[k, ]
       )) * object$basisInfo$Yscale) # all residuals
-      mseBasis[k] = mean(RbasisCoefs[, k]^2)
-      varBasis[k] = object$basisInfo$varExplained[k] * (nrow(Ytest)-1)/nrow(Ytest)
     }
   }
 

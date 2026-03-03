@@ -187,7 +187,7 @@ mvCV = function(bayesModel,
     }
     residError = array(dim = dim(preds))
     for (idxMCMC in 1:dim(preds)[1]) {
-      residError[idxMCMC, , ] = coefsResidError[idxMCMC, , ] %*% fit$basisInfo$basis
+      residError[idxMCMC, , ] = coefsResidError[idxMCMC, , ] %*% t(t(fit$basisInfo$basis) * fit$basisInfo$Yscale)
     }
     rm(coefsResidError)
     preds = preds + residError
