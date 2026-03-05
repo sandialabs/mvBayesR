@@ -171,10 +171,9 @@ fit.mvBayes <- function(object, nCores = 1, ...) {
 #' @param addResidError A logical to add back in residual error
 #' @param addTruncError A logical indicating whether or not to insert random truncation error into the predictions, where the truncation comes from the reduced dimensionality in the representation of Y.
 #' @param returnPostCoefs A logical indicating whether or not to output predictions of Ynew (i.e., the observation-specific basis weighting) in addition to predictions of Y.
-#' @param nCores An integer less than or equal to object$basisInfo$nBasis, specifying the number of threads to use when obtaining predictions from the independent Bayesian models.
 #' @param idxSamplesArg str Name of an optional argument of `predict` controlling which posterior samples are used for posterior prediction.
 #' @param ... Additional arguments to predict.bayesModel, where "bayesModel" is the Bayesian model used in fitting, specified in object$bayesModel.
-#' @return If getpostCoefs==FALSE, predict.mvBayes() outpus an array of dimension c(nSamples, n, q), where nSamples is the number of posterior samples obtained in fitting bayesModel, and n and q are respectively the number of rows and columns in Y. Elements of this array are posterior predictive samples of Y. Otherwise, a list of length two is output, with elements Ypost giving samples from the posterior predictive distribution of Y, and postCoefs givine samples from the posterior predictive distribution of Ynew, i.e., from the observation-specific basis weights.
+#' @return If getpostCoefs==FALSE, predict.mvBayes() outpus an array of dimension c(nSamples, ntest, nMV), where nSamples is the number of posterior samples obtained in fitting bayesModel, and n and nMV are respectively the number of rows and columns in Y. Elements of this array are posterior predictive samples of Y. Otherwise, a list of length two is output, with elements Ypost giving samples from the posterior predictive distribution of Y, and postCoefs givine samples from the posterior predictive distribution of Ynew, i.e., from the observation-specific basis weights.
 #' @keywords multivariate bayesian regression modeling, functional data analysis
 #' @seealso See \link{mvBayes}
 #' @export
@@ -185,11 +184,13 @@ predict.mvBayes = function(object,
                            addResidError = FALSE,
                            addTruncError = FALSE,
                            returnPostCoefs = FALSE,
-                           nCores = 1,
                            idxSamplesArg = NULL,
                            ...) {
-  n = nrow(Xtest)
-  q = object$basisInfo$nMV
+  ntest = nrow(Xtest)
+  nBasis = object$basisInfo$nBasis
+  nMV = object$basisInfo$nMV
+  basis = object$basisInfo$basis
+
   if (is.null(idxSamplesArg)) {
     idxSamplesArg = object$idxSamplesArg
   }
@@ -218,40 +219,24 @@ predict.mvBayes = function(object,
     predictArgs[[idxSamplesArg]] = idxSamples
   }
 
-  nCores = .nCoresAdjust(object, nCores)
-
-  ntest = nrow(Xtest)
-  nBasis = object$basisInfo$nBasis
-  nMV = object$basisInfo$nMV
-  basis = object$basisInfo$basis
-
   predictBayesModel = function(k) {
     return(do.call(predict, c(
       list(object$bmList[[k]], Xtest), predictArgs
     )))
   }
 
-  if (nCores == 1) {
-    postCoefs = lapply(1:nBasis, predictBayesModel)
-  } else {
-    postCoefs = parallel::mclapply(1:nBasis,
-                                   predictBayesModel,
-                                   mc.cores = nCores,
-                                   mc.preschedule = FALSE)
-  }
-  postCoefs = matrix(unlist(postCoefs), ncol = nBasis)
-
-  if (addResidError) {
-    residError <- sapply(1:nBasis, function(k) {
-      rnorm(nrow(postCoefs), sd = object$bmList[[k]]$samples$residSD)
-    })
-    postCoefs = postCoefs + residError
-  }
-
-  nSamples = nrow(postCoefs) / ntest
-  postCoefs <- array(postCoefs, dim = c(nSamples, ntest, nBasis))
-
   if (object$basisInfo$basisType == "pns") {
+    postCoefs = lapply(1:nBasis, predictBayesModel)
+    postCoefs = matrix(unlist(postCoefs), ncol = nBasis)
+    if (addResidError) {
+      residError <- sapply(1:nBasis, function(k) {
+        rnorm(nrow(postCoefs), sd = object$bmList[[k]]$samples$residSD)
+      })
+      postCoefs = postCoefs + residError
+    }
+    nSamples = nrow(postCoefs) / ntest
+    postCoefs <- array(postCoefs, dim = c(nSamples, ntest, nBasis))
+
     PNS = object$basisInfo$basisConstruct
     N = dim(postCoefs)[1] * dim(postCoefs)[2]
     nBasis = object$basisInfo$nBasis
@@ -259,38 +244,45 @@ predict.mvBayes = function(object,
     inmat[1:nBasis, ] = t(array(postCoefs, dim = c(N, nBasis)))
     YtruncStandard = fdasrvf:::fastPNSe2s(inmat, PNS)
     if (nSamples == 1) {
-      YpostT = array(YtruncStandard, dim = c(n, q)) * object$basisInfo$radius
-      YpostT = t(YpostT)
+      Ypost = array(YtruncStandard, dim = c(ntest, nMV)) * object$basisInfo$radius
+      Ypost = t(Ypost)
     } else {
-      YpostT = array(YtruncStandard, dim = c(nSamples, n, q)) * object$basisInfo$radius
-      YpostT = aperm(YpostT, c(3, 2, 1))
+      Ypost = array(YtruncStandard, dim = c(nSamples, ntest, nMV)) * object$basisInfo$radius
+      Ypost = aperm(Ypost, c(3, 2, 1))
     }
     rm(YtruncStandard)
   } else {
-    if (nSamples == 1){
-      if (n == 1){
-        YstandardPostT =  t(basis) %*% t(t(postCoefs[1, , ]))
-      } else {
-        YstandardPostT =  t(basis) %*% t(postCoefs[1, , ])
-      }
-    } else {
-      YstandardPostT = array(0, dim = c(q, n, nSamples))
-      for (it in 1:nSamples){
-        if (n == 1){
-          YstandardPostT[, , it] =  t(basis) %*% t(t(postCoefs[it, , ]))
-        } else {
-          YstandardPostT[, , it] =  t(basis) %*% t(postCoefs[it, , ])
-        }
-
-      }
+    postCoefs_k <- predictBayesModel(1)
+    nSamples <- length(postCoefs_k) / ntest
+    Ypost <- array(0, dim = c(nMV, ntest, nSamples))
+    if (returnPostCoefs) {
+      postCoefs <- array(NA_real_, dim = c(nSamples, ntest, nBasis))
     }
-    YpostT = YstandardPostT * object$basisInfo$Yscale + object$basisInfo$Ycenter
+    for (k in 1:nBasis) {
+      if (k > 1) {
+        postCoefs_k <- predictBayesModel(k)
+      }
+      if (addResidError) {
+        postCoefs_k <- postCoefs_k + rnorm(nSamples*ntest, sd = object$bmList[[k]]$samples$residSD)
+      }
+      if (returnPostCoefs) {
+        postCoefs[, , k] <- postCoefs_k
+      }
+      if (nSamples == 1) {
+        postCoefs_k <- matrix(postCoefs_k, nrow = 1)
+      }
+      for (it in 1:nSamples) {
+        Ypost[, , it] <- Ypost[, , it] + tcrossprod(basis[k, ], postCoefs_k[it, ])
+      }
+      rm(postCoefs_k)
+    }
+    Ypost <- Ypost * object$basisInfo$Yscale + object$basisInfo$Ycenter
   }
 
-  if (nSamples == 1){
-    YpostT = t(YpostT)
+  if (is.matrix(Ypost)) {
+    Ypost = t(Ypost)
   } else {
-    YpostT = aperm(YpostT, 3:1)
+    Ypost = aperm(Ypost, 3:1)
   }
 
   if (addTruncError) {
@@ -303,13 +295,13 @@ predict.mvBayes = function(object,
       truncError = array(object$basisInfo$truncError[idx, ], dim = c(nSamples, ntest, nMV))
     }
 
-    YpostT = YpostT + truncError
+    Ypost = Ypost + truncError
   }
 
   if (returnPostCoefs) {
-    return(list(Ypost = YpostT, postCoefs = postCoefs))
+    return(list(Ypost = Ypost, postCoefs = postCoefs))
   } else {
-    return(YpostT)
+    return(Ypost)
   }
 }
 
