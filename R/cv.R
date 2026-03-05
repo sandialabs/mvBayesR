@@ -30,7 +30,9 @@ mvCV = function(bayesModel,
                      idxSamples = "all",
                      uqTruncMethod = c("gaussian", "empirical"),
                      ...) {
-  set.seed(seed)
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
 
   # setup
   n = nrow(X)
@@ -80,8 +82,9 @@ mvCV = function(bayesModel,
       setdiff(1:n, idx)) # remaining indices after test set is determined
   }
 
-  set.seed(NULL) # re-set as if no seed had been set
-
+  if (!is.null(seed)) {
+    set.seed(NULL) # re-set as if no seed had been set
+  }
 
   # Run cv
   rmse = rSquared = coverage = intervalWidth = intervalScore = fitTime = predictTime = numeric(nRep)
