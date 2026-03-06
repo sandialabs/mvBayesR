@@ -11,7 +11,6 @@
   addResidError = FALSE,
   addTruncError = FALSE,
   returnPostCoefs = FALSE,
-  nCores = 1,
   idxSamplesArg = NULL,
   ...
 )
@@ -29,14 +28,12 @@
 
 \item{returnPostCoefs}{A logical indicating whether or not to output predictions of Ynew (i.e., the observation-specific basis weighting) in addition to predictions of Y.}
 
-\item{nCores}{An integer less than or equal to object$basisInfo$nBasis, specifying the number of threads to use when obtaining predictions from the independent Bayesian models.}
-
 \item{idxSamplesArg}{str Name of an optional argument of `predict` controlling which posterior samples are used for posterior prediction.}
 
 \item{...}{Additional arguments to predict.bayesModel, where "bayesModel" is the Bayesian model used in fitting, specified in object$bayesModel.}
 }
 \value{
-If getpostCoefs==FALSE, predict.mvBayes() outpus an array of dimension c(nSamples, n, q), where nSamples is the number of posterior samples obtained in fitting bayesModel, and n and q are respectively the number of rows and columns in Y. Elements of this array are posterior predictive samples of Y. Otherwise, a list of length two is output, with elements Ypost giving samples from the posterior predictive distribution of Y, and postCoefs givine samples from the posterior predictive distribution of Ynew, i.e., from the observation-specific basis weights.
+If getpostCoefs==FALSE, predict.mvBayes() outpus an array of dimension c(nSamples, ntest, nMV), where nSamples is the number of posterior samples obtained in fitting bayesModel, and n and nMV are respectively the number of rows and columns in Y. Elements of this array are posterior predictive samples of Y. Otherwise, a list of length two is output, with elements Ypost giving samples from the posterior predictive distribution of Y, and postCoefs givine samples from the posterior predictive distribution of Ynew, i.e., from the observation-specific basis weights.
 }
 \description{
 Given an object of class "mvBayes" from the mvBayes() function, predict.mvBayes() obtains posterior predictive samples at specific input locations. Residual variance from the basis truncation can (optionally) be inserted as well.
