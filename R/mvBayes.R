@@ -239,7 +239,7 @@ predict.mvBayes = function(object,
     nBasis = object$basisInfo$nBasis
     inmat = matrix(0, length(PNS$PNS$radii), N)
     inmat[1:nBasis, ] = t(array(postCoefs, dim = c(N, nBasis)))
-    YtruncStandard = fdasrvf:::fastPNSe2s(inmat, PNS)
+    YtruncStandard = fdasrvf::fastPNSe2s(inmat, PNS)
     if (nSamples == 1) {
       Ypost = array(YtruncStandard, dim = c(ntest, nMV)) * object$basisInfo$radius
       Ypost = t(Ypost)
@@ -595,9 +595,9 @@ plot.mvBayes <- function(x,
     for (k in 1:x$basisInfo$nBasis) {
       inmat = inmatPred = matrix(0, length(PNS$PNS$radii), nrow(coefs))
       inmat[k, ] = coefs[, k]
-      basisScaled = as.matrix(fdasrvf:::fastPNSe2s(inmat, PNS)) * x$basisInfo$radius
+      basisScaled = as.matrix(fdasrvf::fastPNSe2s(inmat, PNS)) * x$basisInfo$radius
       inmatPred[k, ] = coefsPred[, k]
-      basisPredScaled = as.matrix(fdasrvf:::fastPNSe2s(inmatPred, PNS)) * x$basisInfo$radius
+      basisPredScaled = as.matrix(fdasrvf::fastPNSe2s(inmatPred, PNS)) * x$basisInfo$radius
       RbasisScaled[[k]] <- basisScaled - basisPredScaled
     }
   } else {

@@ -67,10 +67,10 @@ basisSetup = function(Y,
       cli::cli_alert_info("Computing {n.pc} pns components...")
     }
 
-    basisConstruct = fdasrvf:::fastpns(pnsdat,
-                                       n.pc = n.pc,
-                                       sphere.type = "small",
-                                       output = FALSE)
+    basisConstruct = fdasrvf::fastpns(pnsdat,
+                                      n.pc = n.pc,
+                                      sphere.type = "small",
+                                      output = FALSE)
     coefs = t(basisConstruct$resmat)
 
     basis = array(0, dim = c(out$nMV, out$nMV))
@@ -156,7 +156,7 @@ getYtrunc.basisSetup = function(object,
   if (object$basisType == 'pns') {
     inmat = array(0, dim = c(length(object$basisConstruct$PNS$radii), nrow(coefs)))
     inmat[1:nBasis, ] = t(coefs[, 1:nBasis])
-    YtruncStandard = fdasrvf:::fastPNSe2s(inmat, object$basisConstruct) * object$radius
+    YtruncStandard = fdasrvf::fastPNSe2s(inmat, object$basisConstruct) * object$radius
   } else {
     YtruncStandard = coefs %*% object$basis
   }
@@ -182,7 +182,7 @@ getCoefs.basisSetup = function(object, Ytest = NULL) {
     return(object$coefs)
   } else{
     if (object$basisType == "pns") {
-      coefsTest = t(fdasrvf:::fastPNSs2e(t(Ytest), object$basisConstruct))
+      coefsTest = t(fdasrvf::fastPNSs2e(t(Ytest), object$basisConstruct))
       return(coefsTest[,1:object$nBasis, drop = FALSE])
     } else {
       YtestStandard = t((t(Ytest) - object$Ycenter) / object$Yscale)
@@ -306,7 +306,7 @@ plot.basisSetup = function(x,
     for (k in 1:nBasis) {
       inmat = matrix(0, length(PNS$PNS$radii), nPlot)
       inmat[k, ] = x$coefs[idxPlot, k]
-      basisScaled[[k]] = t(as.matrix(fdasrvf:::fastPNSe2s(inmat, PNS))) * x$radius
+      basisScaled[[k]] = t(as.matrix(fdasrvf::fastPNSe2s(inmat, PNS))) * x$radius
     }
   } else {
     for (k in 1:nBasis) {

@@ -24,6 +24,7 @@ Imports:
 Suggests: 
     fdasrvf,
     Splinets,
+    DDK,
     BayesPPR,
     scaledVecchia,
     knitr,
