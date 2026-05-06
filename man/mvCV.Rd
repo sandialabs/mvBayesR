@@ -56,10 +56,3 @@ First separates the data into randomly chosen test and training sets (user-speci
 \seealso{
 \link{mvBayes}, \link{predict.mvBayes} for prediction
 }
-\keyword{Bayesian}
-\keyword{analysis}
-\keyword{data}
-\keyword{functional}
-\keyword{modeling,}
-\keyword{multivariate}
-\keyword{regression}

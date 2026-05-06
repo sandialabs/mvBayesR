@@ -32,10 +32,3 @@ Given an object of class "mvBayes" from the mvBayes() function, traceplot() plot
 \seealso{
 See \link{mvBayes}
 }
-\keyword{analysis}
-\keyword{bayesian}
-\keyword{data}
-\keyword{functional}
-\keyword{modeling,}
-\keyword{multivariate}
-\keyword{regression}

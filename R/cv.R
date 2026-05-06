@@ -15,7 +15,6 @@
 #' @param ... Additional arguments to mvBayes, including arguments to bayesModel.
 #' @details First separates the data into randomly chosen test and training sets (user-specified train/test splits and k-fold cv are forthcoming), then fits mvBayes(bayesModel, X, Y, ...) to the training set and evaluates predictive performance on the test set. Repeats this process nRep times.
 #' @return An object of class "mvBayesCV", which is a list containing the out-of-sample rmse for each replication, the fitting and prediction times, and the function call. Other prediction metrics, including coverage of prediction intervals, are forthcoming.
-#' @keywords multivariate Bayesian regression modeling, functional data analysis
 #' @seealso \link{mvBayes}, \link{predict.mvBayes} for prediction
 #' @export
 mvCV = function(bayesModel,

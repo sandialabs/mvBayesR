@@ -25,9 +25,12 @@ Suggests:
     fdasrvf,
     Splinets,
     BayesPPR,
-    scaledVecchia
+    scaledVecchia,
+    knitr,
+    rmarkdown
 Encoding: UTF-8
 LazyData: true
 Config/roxygen2/version: 8.0.0
 URL: https://github.com/sandialabs/mvBayesR
 BugReports: https://github.com/sandialabs/mvBayesR/issues
+VignetteBuilder: knitr
