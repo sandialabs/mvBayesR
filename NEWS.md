@@ -1,3 +1,3 @@
-3# mvBayes 1.2.0
+# mvBayes 1.2.0
 
 * Initial CRAN submission.

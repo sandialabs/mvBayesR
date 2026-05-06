@@ -35,8 +35,3 @@ Calculates a basis expansion of a functional data. Used by the mvBayes function 
 \seealso{
 Used by the main function \link{mvBayes}
 }
-\keyword{analysis}
-\keyword{basis}
-\keyword{component}
-\keyword{expansion,}
-\keyword{principal}

@@ -17,11 +17,9 @@
 #' @param ... Additional arguments to bayesModel.
 #' @details First uses the basisSetup function to decompose the response into nBasis components, then independently fits bayesModel to each of those components.
 #' @return An object of class "mvBayes", which is a list containing "X", an object called "basisInfo" of class "basisSetup" containing information about the basis decomposition, "bayesModel", and "bmList", which contains a list of length nBasis containing fitted model objects for each basis component.
-#' @keywords multivariate Bayesian regression modeling, functional data analysis
 #' @seealso \link{basisSetup} for computing the basis decomposition, \link{predict.mvBayes} for prediction, \link{plot.mvBayes} for plotting the model fit, \link{traceplot} for monitoring posterior convergence, and \link{mvSobol} for sensitivity analysis.
 #' @export
 #' @import parallel
-#' @example inst/examples.R
 #'
 mvBayes = function(bayesModel,
                    X,

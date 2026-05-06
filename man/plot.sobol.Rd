@@ -5,7 +5,7 @@
 \title{Plot Sobol Decomposition}
 \usage{
 \method{plot}{sobol}(
-  object,
+  x,
   totalSobol = TRUE,
   labels = NULL,
   idxMV = NULL,
@@ -20,7 +20,7 @@
 )
 }
 \arguments{
-\item{object}{An object of class "mvSobol" containing the Sobol Indices}
+\item{x}{An object of class "mvSobol" containing the Sobol Indices}
 
 \item{totalSobol}{A boolean to plot the total sobol (default = `TRUE`)}
 
@@ -50,10 +50,3 @@ Given an object of class "mvSobol" from the mvSobol() function
 \seealso{
 See \link{mvBayes}
 }
-\keyword{Bayesian}
-\keyword{analysis}
-\keyword{data}
-\keyword{functional}
-\keyword{modeling,}
-\keyword{multivariate}
-\keyword{regression}

@@ -9,7 +9,6 @@
 #' @param center logical: whether or to center `Y` before basis computations.
 #' @param scale logical: whether to scale `Y` before basis computations.
 #' @return object of class `basisSetup` with plot method.
-#' @keywords basis expansion, principal component analysis, dimension reduction
 #' @seealso Used by the main function \link{mvBayes}
 #' @import stats
 #' @export
