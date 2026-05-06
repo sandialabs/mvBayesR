@@ -5,11 +5,11 @@ Version: 1.2.0
 Authors@R: c(
     person(given = "Gavin", 
            family = "Collins", 
-           role = c("aut", "cre"), 
+           role = c("aut", "ctb"), 
            email = "gqcolli@sandia.gov"),
     person(given = "J. Derek",
            family = "Tucker",
-           role = "ctb",
+           role = c("ctb", "cre"),
            email = "jdtuck@sandia.gov",
            comment = c(ORCID = "0000-0001-8844-2169")))
 Description: Fit, plot, and predict a multivariate response, using an arbitrary univariate Bayesian regression model to independently fit basis components (e.g., principal components) of the response.
