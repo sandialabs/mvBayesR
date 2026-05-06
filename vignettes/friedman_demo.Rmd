@@ -75,7 +75,7 @@ plot(mod, Xtest = Xtest, Ytest = Ytest, idxMV = tt, xlabel = "tt")
 
 Compute Sensitivity
 ```{r sobol}
-modSensitivity = mvSobol(mod, nMC = 2^12)
+modSensitivity = mvSobol(mod)
 plot(modSensitivity, idxMV = tt, xlabel = "tt")
 ```
 
