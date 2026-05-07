@@ -1,4 +1,6 @@
 [![R-CMD-check](https://github.com/sandialabs/mvBayesR/actions/workflows/r.yml/badge.svg)](https://github.com/sandialabs/mvBayesR/actions/workflows/r.yml)
+[![CRAN status](https://www.r-pkg.org/badges/version/mvBayes)](https://CRAN.R-project.org/package=mvBayes)
+
 
 # mvBayes
 
@@ -11,10 +13,23 @@ An R implementation of the multivariate Bayesian regression (mvBayes) framework.
 
 ### Installation
 ------------------------------------------------------------------------------
-1. Download zip or tar.gz of package or clone repository
-2. Install into R (> 4.1.0)
+v0.1.0 is on [CRAN](https://cran.r-project.org/package=mvBayes) and can
+be installed as
 
-> `install.packages("mvBayes.tar.gz", repos = NULL)`
+``` r
+install.packages("mvBayes")`
+```
+
+For a more up to date, but may not be stable version from git
+repository.
+
+1.  Download zip or tar.gz of package or clone repository
+2.  Install into R (\> 4.3.0)
+
+``` r
+library(devtools)
+install_github("sandialabs/mvBayesR")
+```
 
 ------------------------------------------------------------------------------
 
