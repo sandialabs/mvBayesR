@@ -4,7 +4,10 @@
 
 # mvBayes
 
-An R implementation of the multivariate Bayesian regression (mvBayes) framework. Decomposes a multivariate/functional response using a user-specified orthogonal basis decomposition, and then models each basis component independently using an arbitrary user-specified (univariate) Bayesian regression model. Includes prediction and plotting methods.
+An R implementation of the multivariate Bayesian regression (mvBayes) framework. 
+Decomposes a multivariate/functional response using a user-specified orthogonal basis decomposition, 
+and then models each basis component independently using an arbitrary user-specified (univariate) 
+Bayesian regression model. Includes prediction and plotting methods. (Francom et al., 2025 <DOI:10.1137/24M164409>)
 
 
 ## Examples
