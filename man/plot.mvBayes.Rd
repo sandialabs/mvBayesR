@@ -5,7 +5,7 @@
 \title{Plot the Bayesian Model Fit of a Multivariate Response}
 \usage{
 \method{plot}{mvBayes}(
-  object,
+  x,
   Xtest = NULL,
   Ytest = NULL,
   idxSamples = "final",
@@ -19,7 +19,7 @@
 )
 }
 \arguments{
-\item{object}{An object of class "mvBayes" containing the multivariate Bayesian model fit of a response matrix Y.}
+\item{x}{An object of class "mvBayes" containing the multivariate Bayesian model fit of a response matrix Y.}
 
 \item{Xtest}{A matrix or data.frame of inputs at which the model fit will be evaluated. If NULL, the training inputs X will be used.}
 
@@ -50,10 +50,3 @@ Given an object of class "mvBayes" from the mvBayes() function, plot.mvBayes() p
 \seealso{
 See \link{mvBayes}, \link{predict.mvBayes}
 }
-\keyword{analysis}
-\keyword{bayesian}
-\keyword{data}
-\keyword{functional}
-\keyword{modeling,}
-\keyword{multivariate}
-\keyword{regression}

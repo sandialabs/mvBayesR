@@ -8,7 +8,6 @@
 #' @param showPlot whether to compute generate a plot along with the returned Sobol' object
 #' @param ... Additional arguments to BASS::sobolBasis (other emulator-specific Sobol' calculations to be implemented in the future). Unnecessary for anova-compatible models.
 #' @return An object of class "bassSob" if object$bayesModel is the BASS::bass() function, or "mvSobol" otherwise. Contains information about the Sobol' decomposition: See ?BASS::sobolBasis for more info.
-#' @keywords Sobol' decomposition of variance, BASS
 #' @seealso See \link{mvBayes}
 #' @export
 #' @import BASS
@@ -226,7 +225,7 @@ mvSobol = function (object,
 #' @title Plot Sobol Decomposition
 #'
 #' @description Given an object of class "mvSobol" from the mvSobol() function
-#' @param object An object of class "mvSobol" containing the Sobol Indices
+#' @param x An object of class "mvSobol" containing the Sobol Indices
 #' @param totalSobol A boolean to plot the total sobol (default = `TRUE`)
 #' @param labels A character vector of length <= 8 containing the names of the parameters
 #' @param idxMV A vector defining the time points
@@ -238,12 +237,11 @@ mvSobol = function (object,
 #' @param file An optional location at which the plots will be saved. If NULL, no file is saved.
 #' @param title An optional title to be printed at the top of the traceplots.
 #' @param ... additional plot arguments
-#' @keywords multivariate Bayesian regression modeling, functional data analysis
 #' @seealso See \link{mvBayes}
 #' @export
 #' @import graphics
 #'
-plot.sobol = function(object,
+plot.sobol = function(x,
                       totalSobol = TRUE,
                       labels = NULL,
                       idxMV = NULL,
@@ -278,10 +276,10 @@ plot.sobol = function(object,
     "#9edae5"
   )
 
-  p = object$p
+  p = x$p
 
   if (is.null(idxMV)) {
-    idxMV = 1:object$nMV
+    idxMV = 1:x$nMV
   }
 
   if (is.null(labels)) {
@@ -308,9 +306,9 @@ plot.sobol = function(object,
     lwdLegend = c(lwdLegend, 1)
   }
 
-  firstOrder = apply(object$firstOrderSobol, c(2, 3), mean)
+  firstOrder = apply(x$firstOrderSobol, c(2, 3), mean)
 
-  firstOrderRel = t(t(firstOrder) / object$varTotal)
+  firstOrderRel = t(t(firstOrder) / x$varTotal)
 
   par(
     mfrow = c(1, 2 + totalSobol),
@@ -327,7 +325,7 @@ plot.sobol = function(object,
 
     plot(
       idxMV,
-      rep(0, object$nMV),
+      rep(0, x$nMV),
       type = "l",
       col = cmap[1],
       ylim = c(0, 1),
@@ -336,7 +334,7 @@ plot.sobol = function(object,
       xlab = xlabel,
       ylab = "Relative First-Order Sobol' Index"
     )
-    polygon(c(idxMV, rev(idxMV)), c(rep(0, object$nMV), rev(sens[, 1])), col = cmap[1])
+    polygon(c(idxMV, rev(idxMV)), c(rep(0, x$nMV), rev(sens[, 1])), col = cmap[1])
     for (j in 2:p) {
       polygon(c(idxMV, rev(idxMV)), c(sens[, j - 1], rev(sens[, j])), col = cmap[j])
     }
@@ -384,11 +382,11 @@ plot.sobol = function(object,
   }
 
   if (waterfall) {
-    sensVar = t(rbind(apply(firstOrder, 2, cumsum), object$varTotal))
+    sensVar = t(rbind(apply(firstOrder, 2, cumsum), x$varTotal))
 
     plot(
       idxMV,
-      rep(0, object$nMV),
+      rep(0, x$nMV),
       type = "l",
       col = cmap[1],
       ylim = c(0, max(sensVar)*1.1),
@@ -397,7 +395,7 @@ plot.sobol = function(object,
       xlab = xlabel,
       ylab = "First-Order Sobol' Index"
     )
-    polygon(c(idxMV, rev(idxMV)), c(rep(0, object$nMV), rev(sensVar[, 1])), col = cmap[1])
+    polygon(c(idxMV, rev(idxMV)), c(rep(0, x$nMV), rev(sensVar[, 1])), col = cmap[1])
     for (j in 2:p) {
       polygon(c(idxMV, rev(idxMV)), c(sensVar[, j - 1], rev(sensVar[, j])), col = cmap[j])
     }
@@ -428,7 +426,7 @@ plot.sobol = function(object,
     }
     lines(
       idxMV,
-      object$varTotal - apply(firstOrder, 2, sum),
+      x$varTotal - apply(firstOrder, 2, sum),
       lwd = 2,
       col = "grey"
     )
@@ -459,15 +457,15 @@ plot.sobol = function(object,
   )
 
   # total sobol plot
-  if (is.null(object$totalOrderSobol)) {
+  if (is.null(x$totalOrderSobol)) {
     warning(
-      "'object' does not have totalOrderSobol"
+      "'x' does not have totalOrderSobol"
     )
     totalSobol = FALSE
   }
   if (totalSobol) {
 
-    totalOrder = apply(object$totalOrderSobol, c(2, 3), mean)
+    totalOrder = apply(x$totalOrderSobol, c(2, 3), mean)
 
     plot(
       idxMV,

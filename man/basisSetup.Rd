@@ -38,10 +38,3 @@ Calculates a basis expansion of a specified type.
 \seealso{
 Used by the main function \link{mvBayes}
 }
-\keyword{analysis,}
-\keyword{basis}
-\keyword{component}
-\keyword{dimension}
-\keyword{expansion,}
-\keyword{principal}
-\keyword{reduction}

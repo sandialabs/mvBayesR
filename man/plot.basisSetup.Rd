@@ -5,7 +5,7 @@
 \title{Visualizing the Basis Decomposition}
 \usage{
 \method{plot}{basisSetup}(
-  object,
+  x,
   nBasis = NULL,
   propVarExplained = NULL,
   nPlot = NULL,
@@ -18,7 +18,7 @@
 )
 }
 \arguments{
-\item{object}{An object of class "basisSetup" containing information about a basis decomposition of a response matrix Y.}
+\item{x}{An object of class "basisSetup" containing information about a basis decomposition of a response matrix Y.}
 
 \item{nBasis}{An integer specifying the number of basis functions to plot. If both nBasis and propVarExplained are NULL, object$nBasis is used, but anything <= object$nbasis is allowed.}
 
@@ -47,10 +47,3 @@ Given an object of class "basisSetup" from the basisSetup() function, plot.basis
 \seealso{
 See \link{mvBayes}
 }
-\keyword{Bayesian}
-\keyword{analysis}
-\keyword{data}
-\keyword{functional}
-\keyword{modeling,}
-\keyword{multivariate}
-\keyword{regression}

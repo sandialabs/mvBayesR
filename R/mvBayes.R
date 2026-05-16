@@ -17,11 +17,9 @@
 #' @param ... Additional arguments to bayesModel.
 #' @details First uses the basisSetup function to decompose the response into nBasis components, then independently fits bayesModel to each of those components.
 #' @return An object of class "mvBayes", which is a list containing "X", an object called "basisInfo" of class "basisSetup" containing information about the basis decomposition, "bayesModel", and "bmList", which contains a list of length nBasis containing fitted model objects for each basis component.
-#' @keywords multivariate Bayesian regression modeling, functional data analysis
 #' @seealso \link{basisSetup} for computing the basis decomposition, \link{predict.mvBayes} for prediction, \link{plot.mvBayes} for plotting the model fit, \link{traceplot} for monitoring posterior convergence, and \link{mvSobol} for sensitivity analysis.
 #' @export
 #' @import parallel
-#' @example inst/examples.R
 #'
 mvBayes = function(bayesModel,
                    X,
@@ -174,7 +172,6 @@ fit.mvBayes <- function(object, nCores = 1, ...) {
 #' @param idxSamplesArg str Name of an optional argument of `predict` controlling which posterior samples are used for posterior prediction.
 #' @param ... Additional arguments to predict.bayesModel, where "bayesModel" is the Bayesian model used in fitting, specified in object$bayesModel.
 #' @return If getpostCoefs==FALSE, predict.mvBayes() outpus an array of dimension c(nSamples, ntest, nMV), where nSamples is the number of posterior samples obtained in fitting bayesModel, and n and nMV are respectively the number of rows and columns in Y. Elements of this array are posterior predictive samples of Y. Otherwise, a list of length two is output, with elements Ypost giving samples from the posterior predictive distribution of Y, and postCoefs givine samples from the posterior predictive distribution of Ynew, i.e., from the observation-specific basis weights.
-#' @keywords multivariate bayesian regression modeling, functional data analysis
 #' @seealso See \link{mvBayes}
 #' @export
 #'
@@ -242,7 +239,7 @@ predict.mvBayes = function(object,
     nBasis = object$basisInfo$nBasis
     inmat = matrix(0, length(PNS$PNS$radii), N)
     inmat[1:nBasis, ] = t(array(postCoefs, dim = c(N, nBasis)))
-    YtruncStandard = fdasrvf:::fastPNSe2s(inmat, PNS)
+    YtruncStandard = fdasrvf::fastPNSe2s(inmat, PNS)
     if (nSamples == 1) {
       Ypost = array(YtruncStandard, dim = c(ntest, nMV)) * object$basisInfo$radius
       Ypost = t(Ypost)
@@ -315,7 +312,6 @@ predict.mvBayes = function(object,
 #' @param file An optional location at which the traceplots will be saved. If NULL, no file is saved.
 #' @param title An optional title to be printed at the top of the traceplots.
 #' @param ... additional plot arguments
-#' @keywords multivariate bayesian regression modeling, functional data analysis
 #' @seealso See \link{mvBayes}
 #' @export
 #' @import graphics
@@ -421,7 +417,7 @@ traceplot = function(object,
 #' @title Plot the Bayesian Model Fit of a Multivariate Response
 #'
 #' @description Given an object of class "mvBayes" from the mvBayes() function, plot.mvBayes() plots a few aspects of the Bayesian model fit, colored by basis.
-#' @param object An object of class "mvBayes" containing the multivariate Bayesian model fit of a response matrix Y.
+#' @param x An object of class "mvBayes" containing the multivariate Bayesian model fit of a response matrix Y.
 #' @param Xtest A matrix or data.frame of inputs at which the model fit will be evaluated. If NULL, the training inputs X will be used.
 #' @param Ytest A matrix of responses for which the model fit will be evaluated. Should correspond to Xtest. If NULL, the training responses Y will be used.
 #' @param idxSamples str which samples to use
@@ -433,12 +429,11 @@ traceplot = function(object,
 #' @param file An optional location at which the plot will be saved. If NULL, no file is saved.
 #' @param ... additional plot arguments
 #' @return Top left: Residuals after applying mvBayes(), plotted on top of Ytest (centered if centered=TRUE in the mvBayes() call). Top right: Residuals decomposed and colored by basis. Bottom left: R^2 values for each component. Bottom right: %Residual variance attribution for each component.
-#' @keywords multivariate bayesian regression modeling, functional data analysis
 #' @seealso See \link{mvBayes}, \link{predict.mvBayes}
 #' @export
 #' @import graphics
 #'
-plot.mvBayes <- function(object,
+plot.mvBayes <- function(x,
                          Xtest = NULL,
                          Ytest = NULL,
                          idxSamples = "final",
@@ -454,26 +449,26 @@ plot.mvBayes <- function(object,
   useYtrain <- is.null(Ytest)
 
   if (useXtrain) {
-    Xtest <- object$X
+    Xtest <- x$X
   } else if (useYtrain) {
     message("Model output at user-specified Xtest is being compared to training responses Y.")
   }
 
   if (useYtrain) {
-    Ytest <- .getY(object$basisInfo)
-    coefs <- object$basisInfo$coefs
-    truncError <- object$basisInfo$truncError
+    Ytest <- .getY(x$basisInfo)
+    coefs <- x$basisInfo$coefs
+    truncError <- x$basisInfo$truncError
   } else {
     if (useXtrain) {
       message("Model output at training inputs X is being compared to user-specified Ytest.")
     }
 
-    coefs <- getCoefs(object$basisInfo, Ytest)
-    Ytest <- preprocessY(object$basisInfo, Ytest)
-    Ytrunc <- getYtrunc(object$basisInfo, coefs = coefs)
+    coefs <- getCoefs(x$basisInfo, Ytest)
+    Ytest <- preprocessY(x$basisInfo, Ytest)
+    Ytrunc <- getYtrunc(x$basisInfo, coefs = coefs)
     truncError <- Ytest - Ytrunc
   }
-  truncErrorScaled <- t(t(truncError) / object$basisInfo$Yscale)
+  truncErrorScaled <- t(t(truncError) / x$basisInfo$Yscale)
 
   if (is.null(nPlot)) {
     nPlot <- min(nrow(Xtest), 1000)
@@ -484,16 +479,16 @@ plot.mvBayes <- function(object,
   idxPlot <- sort(sample(nrow(Xtest), nPlot, replace = FALSE))
 
   if (is.null(idxMV)) {
-    idxMV <- 1:object$basisInfo$nMV
+    idxMV <- 1:x$basisInfo$nMV
   }
 
-  if (object$basisInfo$basisType == "pns") {
-    object$basisInfo$Ycenter = apply(.getY(object$basisInfo), 2, mean) # just for plot
+  if (x$basisInfo$basisType == "pns") {
+    x$basisInfo$Ycenter = apply(.getY(x$basisInfo), 2, mean) # just for plot
   }
-  Ycentered = t(t(Ytest) - object$basisInfo$Ycenter)
+  Ycentered = t(t(Ytest) - x$basisInfo$Ycenter)
 
   # Get predictions and residuals
-  YpostObj <- predict(object,
+  YpostObj <- predict(x,
                       Xtest,
                       returnPostCoefs = TRUE,
                       idxSamples = idxSamples)
@@ -508,7 +503,7 @@ plot.mvBayes <- function(object,
   coefsPred <- apply(postCoefs, 2:3, mean)
 
   R <- Ytest - Ypred
-  Rscaled <- t(t(R) / object$basisInfo$Yscale)
+  Rscaled <- t(t(R) / x$basisInfo$Yscale)
   RbasisCoefs <- coefs - coefsPred
 
   cmap = c(
@@ -541,13 +536,13 @@ plot.mvBayes <- function(object,
 
   # Residuals plot
   mseOverall <- mean(Rscaled^2)
-  if (object$basisInfo$basisType == "pns") {
+  if (x$basisInfo$basisType == "pns") {
     mseTotal <- mseOverall
   } else {
     mseTotal <- mseOverall * ncol(Ytest)
   }
-  if (length(object$basisInfo$Ycenter) == 1 &&
-      length(object$basisInfo$Yscale) == 1) {
+  if (length(x$basisInfo$Ycenter) == 1 &&
+      length(x$basisInfo$Yscale) == 1) {
     legendLab = "Y"
   } else{
     legendLab = "Y (Centered)"
@@ -588,30 +583,30 @@ plot.mvBayes <- function(object,
   RbasisScaled <- list()
   mseBasis <- apply(RbasisCoefs^2, 2, mean)
   varBasis <- apply(coefs^2, 2, mean)
-  idxTruncEnd <- max(object$basisInfo$nBasis + 1, length(object$basisInfo$varExplained))
-  varExplainedTrunc <- object$basisInfo$varExplained[(object$basisInfo$nBasis + 1):idxTruncEnd]
+  idxTruncEnd <- max(x$basisInfo$nBasis + 1, length(x$basisInfo$varExplained))
+  varExplainedTrunc <- x$basisInfo$varExplained[(x$basisInfo$nBasis + 1):idxTruncEnd]
   mseTrunc = mean(truncErrorScaled^2)
-  varTotal = mean(t((t(Ytest) - object$basisInfo$Ycenter) / object$basisInfo$Yscale)^2)
+  varTotal = mean(t((t(Ytest) - x$basisInfo$Ycenter) / x$basisInfo$Yscale)^2)
   if (all(is.na(varExplainedTrunc))) {
     varExplainedTrunc <- mseTrunc
   }
-  if (object$basisInfo$basisType == "pns") {
-    PNS = object$basisInfo$basisConstruct
-    for (k in 1:object$basisInfo$nBasis) {
+  if (x$basisInfo$basisType == "pns") {
+    PNS = x$basisInfo$basisConstruct
+    for (k in 1:x$basisInfo$nBasis) {
       inmat = inmatPred = matrix(0, length(PNS$PNS$radii), nrow(coefs))
       inmat[k, ] = coefs[, k]
-      basisScaled = as.matrix(fdasrvf:::fastPNSe2s(inmat, PNS)) * object$basisInfo$radius
+      basisScaled = as.matrix(fdasrvf::fastPNSe2s(inmat, PNS)) * x$basisInfo$radius
       inmatPred[k, ] = coefsPred[, k]
-      basisPredScaled = as.matrix(fdasrvf:::fastPNSe2s(inmatPred, PNS)) * object$basisInfo$radius
+      basisPredScaled = as.matrix(fdasrvf::fastPNSe2s(inmatPred, PNS)) * x$basisInfo$radius
       RbasisScaled[[k]] <- basisScaled - basisPredScaled
     }
   } else {
     mseTrunc <- mseTrunc * ncol(Ytest)
     varTotal <- varTotal * ncol(Ytest)
-    for (k in 1:object$basisInfo$nBasis) {
+    for (k in 1:x$basisInfo$nBasis) {
       RbasisScaled[[k]] = t(t(outer(
-        RbasisCoefs[, k], object$basisInfo$basis[k, ]
-      )) * object$basisInfo$Yscale) # all residuals
+        RbasisCoefs[, k], x$basisInfo$basis[k, ]
+      )) * x$basisInfo$Yscale) # all residuals
     }
   }
 
@@ -631,7 +626,7 @@ plot.mvBayes <- function(object,
     log = ifelse(xscale == "log", "x", ""),
     cex.lab = 0.9
   )
-  for (k in 1:object$basisInfo$nBasis) {
+  for (k in 1:x$basisInfo$nBasis) {
     rgbCmap = grDevices::col2rgb(cmap[(k - 1) %% 20 + 1])
     col = grDevices::rgb(rgbCmap[1] / 255, rgbCmap[2] / 255, rgbCmap[3] / 255, alpha = 0.5)
     matlines(
@@ -651,14 +646,14 @@ plot.mvBayes <- function(object,
   r2Overall <- 1 - mseTotal / varTotal
 
   plot(
-    1:object$basisInfo$nBasis,
+    1:x$basisInfo$nBasis,
     r2Basis,
     ylim = range(r2Basis, r2Overall),
     pch = 19,
     xlab = "Component",
     ylab = expression(R^2),
     xaxt = 'n',
-    col = cmap[(1:object$basisInfo$nBasis - 1) %% 20 + 1],
+    col = cmap[(1:x$basisInfo$nBasis - 1) %% 20 + 1],
     cex.lab = 0.9
   )
   mtext(
@@ -673,8 +668,8 @@ plot.mvBayes <- function(object,
   )
   axis(
     side = 1,
-    at = 1:(object$basisInfo$nBasis),
-    labels = 1:object$basisInfo$nBasis
+    at = 1:(x$basisInfo$nBasis),
+    labels = 1:x$basisInfo$nBasis
   )
 
 
@@ -688,27 +683,27 @@ plot.mvBayes <- function(object,
   mseExplained = mseBasis / mseTotal
 
   plot(
-    1:object$basisInfo$nBasis,
+    1:x$basisInfo$nBasis,
     100 * mseExplained,
-    xlim = c(1, object$basisInfo$nBasis + 1),
+    xlim = c(1, x$basisInfo$nBasis + 1),
     ylim = c(0, 100 * max(mseExplained, mseTruncCS)),
     pch = 19,
     xlab = "Component",
     ylab = "%Residual Variance",
     xaxt = 'n',
-    col = cmap[(1:object$basisInfo$nBasis - 1) %% 20 + 1],
+    col = cmap[(1:x$basisInfo$nBasis - 1) %% 20 + 1],
     cex.lab = 0.9
   )
   points(
-    rep(object$basisInfo$nBasis + 1, length(mseTruncCS)),
+    rep(x$basisInfo$nBasis + 1, length(mseTruncCS)),
     100 * mseTruncCS,
     col = "grey",
     pch = 19
   )
   axis(
     side = 1,
-    at = 1:(object$basisInfo$nBasis + 1),
-    labels = c(1:object$basisInfo$nBasis, 'T')
+    at = 1:(x$basisInfo$nBasis + 1),
+    labels = c(1:x$basisInfo$nBasis, 'T')
   )
 
   if (!is.null(title)) {

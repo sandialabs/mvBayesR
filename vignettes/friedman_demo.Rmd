@@ -1,8 +1,27 @@
-# Load necessary libraries
+---
+title: "friedman_demo"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{friedman_demo}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+knitr::opts_chunk$set(fig.width = 6, fig.height = 6)
+```
+
+```{r setup}
 library(mvBayes)
 library(BASS)
+```
 
-# Generate Data
+Generate Data
+```{r data}
 f<-function(x){
   10*sin(pi*x[,1]*x[,2])+20*(x[,3]-.5)^2+10*x[,4]+5*x[,5]
 }
@@ -20,8 +39,11 @@ ntest = 1000
 Xtest = matrix(runif(ntest * p), ntest, p)
 x<-cbind(rep(tt,each=ntest),kronecker(rep(1,nfunc),Xtest)) # to get y
 Ytest = matrix(f(x),nrow=ntest)+rnorm(ntest*nfunc,0,sigma)
+```
 
-# Fit a multivariate BASS model
+Fit a multivariate BASS model
+
+```{r bass}
 mod = mvBayes(
   bass,
   X,
@@ -29,17 +51,40 @@ mod = mvBayes(
   nBasis=3
 )
 plot(mod)
-plot(mod$basisInfo, idxMV = tt, xlabel = "tt")  # Plot PCA decomposition
-traceplot(mod)
-plot(mod, idxMV = tt, xlabel = "tt") # Evaluate training data fit
-plot(mod, Xtest = Xtest, Ytest = Ytest, idxMV = tt, xlabel = "tt")  # Evaluate test data fit
-modSensitivity = mvSobol(mod, nMC = 2^12)
-plot(modSensitivity, idxMV = tt, xlabel = "tt")
+```
 
+Plot PCA Decomposition
+```{r pca}
+plot(mod$basisInfo, idxMV = tt, xlabel = "tt") 
+```
+
+Plot Traceplots
+```{r traceplot}
+traceplot(mod)
+```
+
+Evaluate Training Fit
+```{r train}
+plot(mod, idxMV = tt, xlabel = "tt")
+```
+
+Evaluate Test Fit
+```{r test}
+plot(mod, Xtest = Xtest, Ytest = Ytest, idxMV = tt, xlabel = "tt")
+```
+
+Compute Sensitivity
+```{r sobol}
+modSensitivity = mvSobol(mod)
+plot(modSensitivity, idxMV = tt, xlabel = "tt")
+```
+
+Compute Posterior Samples and Means
+```{r posterior}
 # All posterior predictive samples
 Ytest_postSamples = predict(mod, Xtest)
 # Posterior predictive mean
 Ytest_postMean = apply(Ytest_postSamples, 2, mean)
 # single posterior predictive sample (from MCMC iteration #429)
 Ytest_postSample429 = predict(mod, Xtest, idxSamples = 429)
-
+```

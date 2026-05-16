@@ -9,7 +9,6 @@
 #' @param center logical: whether or to center `Y` before basis computations.
 #' @param scale logical: whether to scale `Y` before basis computations.
 #' @return object of class `basisSetup` with plot method.
-#' @keywords basis expansion, principal component analysis, dimension reduction
 #' @seealso Used by the main function \link{mvBayes}
 #' @import stats
 #' @export
@@ -68,10 +67,10 @@ basisSetup = function(Y,
       cli::cli_alert_info("Computing {n.pc} pns components...")
     }
 
-    basisConstruct = fdasrvf:::fastpns(pnsdat,
-                                       n.pc = n.pc,
-                                       sphere.type = "small",
-                                       output = FALSE)
+    basisConstruct = fdasrvf::fastpns(pnsdat,
+                                      n.pc = n.pc,
+                                      sphere.type = "small",
+                                      output = FALSE)
     coefs = t(basisConstruct$resmat)
 
     basis = array(0, dim = c(out$nMV, out$nMV))
@@ -157,7 +156,7 @@ getYtrunc.basisSetup = function(object,
   if (object$basisType == 'pns') {
     inmat = array(0, dim = c(length(object$basisConstruct$PNS$radii), nrow(coefs)))
     inmat[1:nBasis, ] = t(coefs[, 1:nBasis])
-    YtruncStandard = fdasrvf:::fastPNSe2s(inmat, object$basisConstruct) * object$radius
+    YtruncStandard = fdasrvf::fastPNSe2s(inmat, object$basisConstruct) * object$radius
   } else {
     YtruncStandard = coefs %*% object$basis
   }
@@ -183,7 +182,7 @@ getCoefs.basisSetup = function(object, Ytest = NULL) {
     return(object$coefs)
   } else{
     if (object$basisType == "pns") {
-      coefsTest = t(fdasrvf:::fastPNSs2e(t(Ytest), object$basisConstruct))
+      coefsTest = t(fdasrvf::fastPNSs2e(t(Ytest), object$basisConstruct))
       return(coefsTest[,1:object$nBasis, drop = FALSE])
     } else {
       YtestStandard = t((t(Ytest) - object$Ycenter) / object$Yscale)
@@ -204,7 +203,7 @@ preprocessY.basisSetup = function(object, Ytest = NULL, ...) {
 #' @title Visualizing the Basis Decomposition
 #'
 #' @description Given an object of class "basisSetup" from the basisSetup() function, plot.basisSetup() visualizes the decomposition, colored by basis.
-#' @param object An object of class "basisSetup" containing information about a basis decomposition of a response matrix Y.
+#' @param x An object of class "basisSetup" containing information about a basis decomposition of a response matrix Y.
 #' @param nBasis An integer specifying the number of basis functions to plot. If both nBasis and propVarExplained are NULL, object$nBasis is used, but anything <= object$nbasis is allowed.
 #' @param propVarExplained Proportion (between 0 and 1) of variation to represent when choosing the number of bases to plot. It is only used if nBasis is NULL. If both are NULL, object$nBasis bases are plotted.
 #' @param nPlot A positive integer specifying the number of samples to plot. Default is min(n, 1000), where n is nrow(Xtest) (or nrow(object$X) if Xtest is NULL).
@@ -215,12 +214,11 @@ preprocessY.basisSetup = function(object, Ytest = NULL, ...) {
 #' @param title An optional title to be printed at the top of the plot.
 #' @param ... additional plot arguments
 #' @return Top left: response Y. Top right: Y decomposed and colored by basis. Bottom left: Truncation error due to dimension reduction in the representation of Y. Bottom right: Percent variance explained by each basis.
-#' @keywords multivariate Bayesian regression modeling, functional data analysis
 #' @seealso See \link{mvBayes}
 #' @export
 #' @import graphics
 #'
-plot.basisSetup = function(object,
+plot.basisSetup = function(x,
                            nBasis = NULL,
                            propVarExplained = NULL,
                            nPlot = NULL,
@@ -230,25 +228,25 @@ plot.basisSetup = function(object,
                            file = NULL,
                            title = NULL,
                            ...) {
-  cs = cumsum(object$varExplained) / sum(object$varExplained)
+  cs = cumsum(x$varExplained) / sum(x$varExplained)
 
   if (is.null(nBasis) & is.null(propVarExplained)) {
-    nBasis = object$nBasis
+    nBasis = x$nBasis
   }
   if (is.null(nBasis)) {
     nBasis = which(cs >= propVarExplained)[1]
   }
-  if (nBasis > length(object$varExplained)) {
-    nBasis = object$nBasis
+  if (nBasis > length(x$varExplained)) {
+    nBasis = x$nBasis
   }
 
-  n = nrow(.getY(object))
+  n = nrow(.getY(x))
 
   if (is.null(nPlot)) {
     nPlot = min(n, 1000)
   } else if (nPlot > n) {
     warning(
-      "nPlot should be at most n, where n=nrow(Xtest) (or n=nrow(object$X) if Xtest is NULL). Using nPlot=n."
+      "nPlot should be at most n, where n=nrow(Xtest) (or n=nrow(x$X) if Xtest is NULL). Using nPlot=n."
     )
     nPlot = n
   }
@@ -260,7 +258,7 @@ plot.basisSetup = function(object,
   }
 
   if (is.null(idxMV)) {
-    idxMV = 1:object$nMV
+    idxMV = 1:x$nMV
   }
 
   cmap = c(
@@ -292,7 +290,7 @@ plot.basisSetup = function(object,
   col = grDevices::rgb(rgbCmap[1] / 255, rgbCmap[2] / 255, rgbCmap[3] / 255, alpha = 0.5)
   matplot(
     idxMV,
-    t(.getY(object)[idxPlot, , drop=FALSE]),
+    t(.getY(x)[idxPlot, , drop=FALSE]),
     type = 'l',
     col = col,
     lty = 1,
@@ -303,21 +301,21 @@ plot.basisSetup = function(object,
   )
 
   basisScaled = vector('list', nBasis)
-  if (object$basisType == "pns") {
-    PNS = object$basisConstruct
+  if (x$basisType == "pns") {
+    PNS = x$basisConstruct
     for (k in 1:nBasis) {
       inmat = matrix(0, length(PNS$PNS$radii), nPlot)
-      inmat[k, ] = object$coefs[idxPlot, k]
-      basisScaled[[k]] = t(as.matrix(fdasrvf:::fastPNSe2s(inmat, PNS))) * object$radius
+      inmat[k, ] = x$coefs[idxPlot, k]
+      basisScaled[[k]] = t(as.matrix(fdasrvf::fastPNSe2s(inmat, PNS))) * x$radius
     }
   } else {
     for (k in 1:nBasis) {
-      basisScaled[[k]] = t(outer(object$coefs[idxPlot, k], object$basis[k, ])) * object$Yscale
+      basisScaled[[k]] = t(outer(x$coefs[idxPlot, k], x$basis[k, ])) * x$Yscale
     }
   }
   ylimBasis = range(basisScaled)
   rgBasis = diff(ylimBasis)
-  ylimTrunc = range(object$truncError)
+  ylimTrunc = range(x$truncError)
   rgTrunc = diff(ylimTrunc)
   if (rgBasis > rgTrunc) {
     ylimTrunc = ylimTrunc + c(-1, 1) * (rgBasis - rgTrunc) / 2
@@ -346,7 +344,7 @@ plot.basisSetup = function(object,
   col = grDevices::rgb(rgbCmap[1] / 255, rgbCmap[2] / 255, rgbCmap[3] / 255, alpha = 0.5)
   matplot(
     idxMV,
-    t(object$truncError[idxPlot, , drop=FALSE]),
+    t(x$truncError[idxPlot, , drop=FALSE]),
     type = 'l',
     col = col,
     lty = 1,
@@ -358,10 +356,10 @@ plot.basisSetup = function(object,
   )
 
   # Percent variance explained plot
-  nMV = ncol(object$Y)
-  varTotal = sum(object$varExplained)
-  propVarTruncCS = cumsum(object$varExplained[(nBasis + 1):nMV] / varTotal)
-  propVarBasis = object$varExplained[1:nBasis] / varTotal
+  nMV = ncol(x$Y)
+  varTotal = sum(x$varExplained)
+  propVarTruncCS = cumsum(x$varExplained[(nBasis + 1):nMV] / varTotal)
+  propVarBasis = x$varExplained[1:nBasis] / varTotal
   plot(
     100 * propVarBasis,
     xlim = c(1, nBasis + 1),
@@ -373,7 +371,7 @@ plot.basisSetup = function(object,
     ylab = '%Variance',
     main = paste0(sprintf(
       "%.3g",
-      100 * object$propVarExplained
+      100 * x$propVarExplained
     ), "% Variance Explained"),
     cex.main = 1,
     cex.lab = 0.9

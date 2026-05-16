@@ -41,10 +41,3 @@ Given an object of class "mvBayes" from the mvBayes() function, predict.mvBayes(
 \seealso{
 See \link{mvBayes}
 }
-\keyword{analysis}
-\keyword{bayesian}
-\keyword{data}
-\keyword{functional}
-\keyword{modeling,}
-\keyword{multivariate}
-\keyword{regression}

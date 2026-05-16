@@ -8,7 +8,6 @@
 #' @param propVarExplained Proportion (between 0 and 1) of variation to explain when choosing the number of principal components. Only used if nBasis is NULL (which is the default).
 #' @param srvf use SRVF if `basisType=jfpca` or `jfpcah` default = TRUE
 #' @return An object of class "basisSetup" containing information about the basis decomposition: "Y" is the original response matrix, "Ycenter" and "Yscale" are vectors of length q specifying the centering and scaling values used for each dimension of Y, "basisType" is the user-specified type of basis, the q-vector "varExplained" specifies the amount of variance explained by each basis in the expansion, matrix "basis" is the qxq basis matrix (e.g., the principal component vectors in the case of pca), "coefs" is the nxq matrix of observation-specific basis weights (e.g., the "scores" in the case of pca), and "truncError" is the nxq matrix of residuals, after accounting for the first nBasis bases.
-#' @keywords basis expansion, principal component analysis
 #' @seealso Used by the main function \link{mvBayes}
 #' @import stats
 #' @export

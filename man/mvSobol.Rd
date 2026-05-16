@@ -35,8 +35,3 @@ Given an object of class "mvBayes" from the mvBayes() function, mvSobol() calcul
 \seealso{
 See \link{mvBayes}
 }
-\keyword{BASS}
-\keyword{Sobol'}
-\keyword{decomposition}
-\keyword{of}
-\keyword{variance,}
