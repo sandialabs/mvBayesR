@@ -25,7 +25,6 @@ Imports:
     splines
 Suggests: 
     fdasrvf,
-    Splinets,
     BayesPPR,
     knitr,
     rmarkdown
