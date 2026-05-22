@@ -1,5 +1,5 @@
 ## simulate data (Friedman function with first variable as functional)
-f = function(x) {
+\donttest{f = function(x) {
   10 * sin(pi * x[, 1] * x[, 2]) + 20 * (x[, 3] - .5)^2 + 10 * x[, 4] + 5 *
     x[, 5]
 }
@@ -21,3 +21,4 @@ fit = mvBayes(
   ),
   idxSamplesArg = 'mcmc.use'
 )
+}
