@@ -237,6 +237,7 @@ mvSobol = function (object,
 #' @param file An optional location at which the plots will be saved. If NULL, no file is saved.
 #' @param title An optional title to be printed at the top of the traceplots.
 #' @param ... additional plot arguments
+#' @return no return value
 #' @seealso See \link{mvBayes}
 #' @export
 #' @import graphics
@@ -309,7 +310,8 @@ plot.sobol = function(x,
   firstOrder = apply(x$firstOrderSobol, c(2, 3), mean)
 
   firstOrderRel = t(t(firstOrder) / x$varTotal)
-
+  oldpar <- par(no.readonly = TRUE)
+  on.exit(par(oldpar))
   par(
     mfrow = c(1, 2 + totalSobol),
     mar = c(5, 5, 1, 1),

@@ -44,6 +44,9 @@
 
 \item{...}{additional plot arguments}
 }
+\value{
+no return value
+}
 \description{
 Given an object of class "mvSobol" from the mvSobol() function
 }

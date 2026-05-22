@@ -284,6 +284,8 @@ plot.basisSetup = function(x,
     "#9edae5"
   )
 
+  oldpar <- par(no.readonly = TRUE)
+  on.exit(par(oldpar))
   par(mfrow = c(2, 2), mar = c(5, 5, 1, 1), oma=c(0, 0, 2, 0))
 
   rgbCmap = grDevices::col2rgb('darkblue')

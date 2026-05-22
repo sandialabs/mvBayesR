@@ -11,7 +11,8 @@ Authors@R: c(
            family = "Tucker",
            role = c("ctb", "cre"),
            email = "jdtuck@sandia.gov",
-           comment = c(ORCID = "0000-0001-8844-2169")))
+           comment = c(ORCID = "0000-0001-8844-2169")),
+    person("Sandia National Laboratories", role = c("cph", "fnd")))
 Description: Fit, plot, and predict a multivariate response, using an arbitrary 
   univariate Bayesian regression model to independently fit basis components 
   (e.g., principal components) of the response (Francom et al., 2025 <DOI:10.1137/24M1644092>).

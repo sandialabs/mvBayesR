@@ -458,9 +458,9 @@ rsobol = function(fn = "fiftysobol.col",
   # Grid cells do not always have one point each because
   # the Sobol' nets may have t>0
   #
-  print(paste("Sending test plots to", fn))
-
   grDevices::pdf(fn, 6, 7)
+  oldpar <- par(no.readonly = TRUE)
+  on.exit(par(oldpar))
   par(xaxt = "n", yaxt = "n", bty = "n")
   par(mar = c(0, 0, 0, 0) + .1)
   par(oma = c(0, 0, .5, 0))
@@ -499,8 +499,6 @@ rsobol = function(fn = "fiftysobol.col",
   } # number of unique elements in a vector
   allok = TRUE
   for (m in mset) {
-    if (verbose)
-      print(paste("Doing m =", m))
     n = 2^m
     vals = rsobol(
       fn = "sobol_Cs.col",
@@ -513,13 +511,7 @@ rsobol = function(fn = "fiftysobol.col",
     lenus = apply(vals, 2, lenu)
     if (any(lenus != n)) {
       allok = FALSE
-      print(paste("LHS problems at m =", m))
-      print(which(lenus != n))
     }
-    if (verbose && allok)
-      print(paste("All ok up to m =", m))
   }
-  if (allok)
-    print("LHS properties look ok")
 
 }

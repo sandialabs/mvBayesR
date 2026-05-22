@@ -18,6 +18,7 @@
 #' @details First uses the basisSetup function to decompose the response into nBasis components, then independently fits bayesModel to each of those components.
 #' @return An object of class "mvBayes", which is a list containing "X", an object called "basisInfo" of class "basisSetup" containing information about the basis decomposition, "bayesModel", and "bmList", which contains a list of length nBasis containing fitted model objects for each basis component.
 #' @seealso \link{basisSetup} for computing the basis decomposition, \link{predict.mvBayes} for prediction, \link{plot.mvBayes} for plotting the model fit, \link{traceplot} for monitoring posterior convergence, and \link{mvSobol} for sensitivity analysis.
+#' @example inst/small_example.R
 #' @export
 #' @import parallel
 #'
@@ -312,6 +313,7 @@ predict.mvBayes = function(object,
 #' @param file An optional location at which the traceplots will be saved. If NULL, no file is saved.
 #' @param title An optional title to be printed at the top of the traceplots.
 #' @param ... additional plot arguments
+#' @return no return value
 #' @seealso See \link{mvBayes}
 #' @export
 #' @import graphics
@@ -381,6 +383,8 @@ traceplot = function(object,
     "#9edae5"
   )
 
+  oldpar <- par(no.readonly = TRUE)
+  on.exit(par(oldpar))
   par(mfrow = c(nrow, ncol), mar = c(5, 5, 1, 1), oma=c(0, 0, 2, 0))
 
   for (j in 1:length(modelParams)) {
@@ -531,6 +535,8 @@ plot.mvBayes <- function(x,
 
 
   # Create plot
+  oldpar <- par(no.readonly = TRUE)
+  on.exit(par(oldpar))
   par(mfrow = c(2, 2), mar = c(5, 5, 1, 1), oma = c(0, 0, 2, 0))
 
 
