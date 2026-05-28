@@ -458,7 +458,6 @@ rsobol = function(fn = "fiftysobol.col",
   # Grid cells do not always have one point each because
   # the Sobol' nets may have t>0
   #
-  grDevices::pdf(fn, 6, 7)
   oldpar <- par(no.readonly = TRUE)
   on.exit(par(oldpar))
   par(xaxt = "n", yaxt = "n", bty = "n")
@@ -484,8 +483,6 @@ rsobol = function(fn = "fiftysobol.col",
         n2 = 2^(m - k)
         .rsobol.glines(n1, n2)
       }
-
-  grDevices::dev.off()
 }
 
 .rsobol.verifylhs = function(mset = 3:12,
