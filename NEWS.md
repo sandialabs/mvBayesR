@@ -1,3 +1,5 @@
+# mvBayes (development version)
+
 # mvBayes 1.2.1
 
 # mvBayes 1.2.0
