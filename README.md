@@ -18,11 +18,11 @@ Bayesian regression model. Includes prediction and plotting methods. (Francom et
 
 ### Installation
 ------------------------------------------------------------------------------
-v0.1.0 is on [CRAN](https://cran.r-project.org/package=mvBayes) and can
+v1.2.1 is on [CRAN](https://cran.r-project.org/package=mvBayes) and can
 be installed as
 
 ``` r
-install.packages("mvBayes")`
+install.packages("mvBayes")
 ```
 
 For a more up to date, but may not be stable version from git
