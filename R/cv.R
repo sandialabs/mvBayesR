@@ -89,11 +89,11 @@ mvCV = function(bayesModel,
   rmse = rSquared = coverage = intervalWidth = intervalScore = fitTime = predictTime = numeric(nRep)
   for (r in 1:nRep) {
     # Set up train/test split
-    Xtrain = X[idxTrain[[r]], ]
-    Ytrain = Y[idxTrain[[r]], ]
+    Xtrain = X[idxTrain[[r]], ,drop = F]
+    Ytrain = Y[idxTrain[[r]], ,drop = F]
 
-    Xtest = X[idxTest[[r]], ]
-    Ytest = Y[idxTest[[r]], ]
+    Xtest = X[idxTest[[r]], ,drop = F]
+    Ytest = Y[idxTest[[r]], ,drop = F]
 
     # Fit models
     if (methods::hasArg("warp_data")) {
