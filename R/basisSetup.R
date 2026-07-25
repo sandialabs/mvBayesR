@@ -83,7 +83,7 @@ basisSetup = function(Y,
     if (basisType %in% c('legendre', 'bspline')) {
       if (is.null(nBasis)) {
         stop(paste0(
-          "need to specificy nBasis for basisType='",
+          "need to specify nBasis for basisType='",
           basisType,
           "'"
         ))
@@ -99,7 +99,7 @@ basisSetup = function(Y,
     } else if (basisType == 'splinet') {
       if (!is.null(nBasis)) {
         stop(paste0(
-          "Cannot specificy nBasis for basisType='",
+          "Cannot specify nBasis for basisType='",
           basisType,
           "'"
         ))

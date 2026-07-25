@@ -167,7 +167,7 @@ rsobol = function(fn = "fiftysobol.col",
   if (s > nrow(col))
     stop(paste(
       sep = "",
-      "Not enough colunns in file fn = ",
+      "Not enough columns in file fn = ",
       fn,
       ". There should be at least s = ",
       s,
@@ -344,7 +344,7 @@ rsobol = function(fn = "fiftysobol.col",
   if (s > nrow(col))
     stop(paste(
       sep = "",
-      "Not enough colunns in file fn = ",
+      "Not enough columns in file fn = ",
       fn,
       ". There should be at least s = ",
       s,
