@@ -1,3 +1,5 @@
+# mvBayes (development version)
+
 # mvBayes 1.2.2
 * bugfixes for unidimensional parameters and responses
 

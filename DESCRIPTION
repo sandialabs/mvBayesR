@@ -1,7 +1,7 @@
 Package: mvBayes
 Type: Package
 Title: Multivariate Bayesian Regression
-Version: 1.2.2
+Version: 1.2.2.9000
 Authors@R: c(
     person(given = "Gavin", 
            family = "Collins", 
