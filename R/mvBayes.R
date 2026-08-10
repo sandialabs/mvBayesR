@@ -172,7 +172,7 @@ fit.mvBayes <- function(object, nCores = 1, ...) {
 #' @param returnPostCoefs A logical indicating whether or not to output predictions of Ynew (i.e., the observation-specific basis weighting) in addition to predictions of Y.
 #' @param idxSamplesArg str Name of an optional argument of `predict` controlling which posterior samples are used for posterior prediction.
 #' @param ... Additional arguments to predict.bayesModel, where "bayesModel" is the Bayesian model used in fitting, specified in object$bayesModel.
-#' @return If getpostCoefs==FALSE, predict.mvBayes() outpus an array of dimension c(nSamples, ntest, nMV), where nSamples is the number of posterior samples obtained in fitting bayesModel, and n and nMV are respectively the number of rows and columns in Y. Elements of this array are posterior predictive samples of Y. Otherwise, a list of length two is output, with elements Ypost giving samples from the posterior predictive distribution of Y, and postCoefs givine samples from the posterior predictive distribution of Ynew, i.e., from the observation-specific basis weights.
+#' @return If getpostCoefs==FALSE, predict.mvBayes() outputs an array of dimension c(nSamples, ntest, nMV), where nSamples is the number of posterior samples obtained in fitting bayesModel, and n and nMV are respectively the number of rows and columns in Y. Elements of this array are posterior predictive samples of Y. Otherwise, a list of length two is output, with elements Ypost giving samples from the posterior predictive distribution of Y, and postCoefs givine samples from the posterior predictive distribution of Ynew, i.e., from the observation-specific basis weights.
 #' @seealso See \link{mvBayes}
 #' @export
 #'
