@@ -86,7 +86,7 @@ mvCV = function(bayesModel,
   }
 
   # Run cv
-  rmse = rSquared = coverage = intervalWidth = intervalScore = fitTime = predictTime = numeric(nRep)
+    rmse = rSquared = coverage = intervalWidth = intervalScore = energyScore = fitTime = predictTime = numeric(nRep)
   for (r in 1:nRep) {
     # Set up train/test split
     Xtrain = X[idxTrain[[r]], ,drop = F]
@@ -210,6 +210,20 @@ mvCV = function(bayesModel,
     preds = preds + residError
     rm(residError)
 
+    # Calculate energy score
+    nSamples = dim(preds)[1]
+    nObs = dim(preds)[2]
+    esObs = numeric(nObs)
+    for (i in 1:nObs) {
+      pred_mat = matrix(preds[, i, ], nrow = nSamples, ncol = dim(preds)[3])
+      y_i = Ytest[i, ]
+      term1 = mean(sqrt(rowSums((pred_mat - matrix(y_i, nrow = nSamples, ncol = length(y_i), byrow = TRUE))^2)))
+      dmat = as.matrix(dist(pred_mat))
+      term2 = 0.5 * mean(dmat)
+      esObs[i] = term1 - term2
+    }
+    energyScore[r] = mean(esObs)
+      
     # Calculate distance from posterior mean
     distBound = numeric(dim(preds)[2])
     for (idx in 1:dim(preds)[2]) {
@@ -237,6 +251,7 @@ mvCV = function(bayesModel,
     coverage = coverage,
     intervalWidth = intervalWidth,
     intervalScore = intervalScore,
+    energyScore = energyScore,
     fitTime = fitTime,
     predictTime = predictTime,
     call = match.call()
