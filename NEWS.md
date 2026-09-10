@@ -1,5 +1,7 @@
+# mvBayes (development version)
+
+# mvBayes 1.2.2
+* bugfixes for unidimensional parameters and responses
+
 # mvBayes 1.2.1
-
-# mvBayes 1.2.0
-
-* Initial CRAN submission.
+* Added a `NEWS.md` file to track changes to the package.

@@ -26,6 +26,9 @@ traceplot(
 
 \item{...}{additional plot arguments}
 }
+\value{
+no return value
+}
 \description{
 Given an object of class "mvBayes" from the mvBayes() function, traceplot() plots traceplots of user-specified variables from the Bayesian model fit, colored by basis.
 }
