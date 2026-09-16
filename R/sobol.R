@@ -18,14 +18,30 @@ mvSobol = function (object,
                   nMC = NULL,
                   showPlot = FALSE,
                   ...) {
-  if (!methods::is(object, 'mvBayes')) {
-    stop("'object' must be of class 'mvBayes'")
+  if (!(methods::is(object, 'mvBayes') ||
+        methods::is(object, 'mvBayesElastic'))) {
+    stop("'object' must be of class 'mvBayes' or 'mvBayesElastic'")
   }
 
   predictArgs = list(...)
 
   if (object$basisInfo$basisType == "pns" && (is.null(nMC))) {
     nMC = 2^12
+  }
+
+  if (!is.null(nMC)) {
+    if (length(nMC) != 1 || !is.numeric(nMC) || nMC < 2) {
+      stop("'nMC' must be a single number >= 2.")
+    }
+    # rsobol() generates 2^m points, so nMC must be a power of two
+    m = round(log2(nMC))
+    if (!isTRUE(all.equal(2^m, as.numeric(nMC)))) {
+      nMC = 2^m
+      warning(sprintf(
+        "'nMC' must be a power of 2. Using nMC=%d.",
+        nMC
+      ))
+    }
   }
 
   if (idxSamples[1] == "default") {
@@ -38,7 +54,6 @@ mvSobol = function (object,
     }
     predictArgs[[object$idxSamplesArg]] = idxSamples
   }
-  nSamples = length(idxSamples)   # stub out to use more indices
   p = ncol(object$X)
   nMV = object$basisInfo$nMV
 
@@ -47,20 +62,30 @@ mvSobol = function (object,
     names(object)[names(object) == 'bmList'] = 'mod.list'
     names(object)[names(object) == 'basisInfo'] = 'dat'
     object$dat$basis = t(object$dat$basis)
-    nUse = length(idxSamples)
 
-    out.bass = BASS::sobolBasis(object, int.order=1, ...)
+    # BASS::sobolBasis takes a single posterior sample at a time (and names the
+    # argument 'mcmc.use' regardless of object$idxSamplesArg), so loop over the
+    # requested samples
+    if (idxSamples[1] == "default") {
+      idxUse = list(NULL)
+    } else {
+      idxUse = as.list(idxSamples)
+    }
+    nUse = length(idxUse)
 
     firstOrder = array(0, dim=c(nUse, p, nMV))
     varTotal = matrix(0, nUse, nMV)
     for (idx in 1:nUse){
-      firstOrder[idx,,] = out.bass$S.var[idx,1:p,]
-      varTotal[idx, ] = out.bass$S.var[idx,1,] / out.bass$S[idx,1,]
+      bassArgs = list(object, int.order = 1, ...)
+      if (!is.null(idxUse[[idx]])) {
+        bassArgs$mcmc.use = idxUse[[idx]]
+      }
+      out.bass = do.call(BASS::sobolBasis, bassArgs)
+      firstOrder[idx,,] = out.bass$S.var[1,1:p,]
+      varTotal[idx, ] = out.bass$S.var[1,1,] / out.bass$S[1,1,]
     }
 
-    if (nUse==1){
-      varTotal = c(varTotal)
-    }
+    varTotal = colMeans(varTotal)
 
     totalOrder = NULL
     if (totalSobol) {
@@ -98,9 +123,12 @@ mvSobol = function (object,
     rm("A", "B", "AB", "X")
 
     xmin = apply(object$X, 2, min)
-    xmintmp = t(replicate(nrow(saltelliSequence), xmin))
     xrange = apply(object$X, 2, max) - xmin
-    xrange = t(replicate(nrow(saltelliSequence), xrange))
+    # matrix() recycles column-wise, which is correct for a per-input vector
+    # (and unlike t(replicate(...)) it stays a matrix when p == 1)
+    nSaltelli = nrow(saltelliSequence)
+    xmintmp = matrix(xmin, nSaltelli, p, byrow = TRUE)
+    xrange = matrix(xrange, nSaltelli, p, byrow = TRUE)
     saltelliSequence = saltelliSequence * xrange + xmintmp
 
     # evaluate model at those param values
@@ -113,101 +141,79 @@ mvSobol = function (object,
     )
     rm("saltelliSequence")
 
-    if (ndims(saltelliMC) == 3){
-      meanS = colMeans(saltelliMC[1, , ])
-      meanS = t(replicate(nrow(saltelliMC[1, , ]), meanS))
-      saltelliMC = saltelliMC[1, , ] - meanS
+    # Normalize to c(nSamplesMC, N, nMV) so each posterior sample gets its own
+    # set of Sobol' indices
+    if (ndims(saltelliMC) == 3) {
+      nSamplesMC = dim(saltelliMC)[1]
     } else {
-      meanS = colMeans(saltelliMC)
-      meanS = t(replicate(nrow(saltelliMC), meanS))
-      saltelliMC = saltelliMC - meanS
+      nSamplesMC = 1
+      saltelliMC = array(saltelliMC, dim = c(1, dim(saltelliMC)))
+    }
+
+    # If predict.bayesModel ignored idxSamplesArg it returned every draw, so
+    # honor the request here rather than computing indices for all of them
+    if (is.numeric(idxSamples) && (nSamplesMC != length(idxSamples)) &&
+        all(idxSamples <= nSamplesMC)) {
+      saltelliMC = saltelliMC[idxSamples, , , drop = FALSE]
+      nSamplesMC = length(idxSamples)
     }
 
     basisType = object$basisInfo$basisType
 
-    if ((basisType == 'jfpca') || (basisType == 'jfpcah')) {
-      C = object$basisInfo$basisConstruct$C
-      if (nMV %% 2 == 0) {
-        M = floor(nMV / 2)
-        N = nrow(saltelliMC)
-        time = seq(0, 1, length.out = M)
-        post_samples = array(0, dim = c(N, M))
-        if (basisType == 'jfpca') {
-          gamtmp = fdasrvf::v_to_gam(t((saltelliMC[, (M + 1):nMV] / C)))
-        } else if (basisType == 'jfpcah') {
-          gamtmp = fdasrvf::h_to_gam(t((saltelliMC[, (M + 1):nMV] / C)))
-        }
-        for (jj in 1:N) {
-          ftmp = saltelliMC[jj, 1:M]
-          post_samples[jj, ] = fdasrvf::warp_f_gamma(ftmp, time, gamtmp[, jj])
-        }
-
-        saltelliMC = post_samples
-        nMV = M
-        rm("post_samples")
-
-      } else {
-        M = floor((nMV - 1) / 2)
-        N = nrow(saltelliMC)
-        time = seq(0, 1, length.out = M)
-        post_samples = array(0, dim = c(N, M))
-        mididx = object$basisInfo$basisConstruct$id
-        if (basisType == 'jfpca') {
-          gamtmp = fdasrvf::v_to_gam(t((saltelliMC[, (M + 2):nMV] / C)))
-        } else if (basisType == 'jfpcah') {
-          gamtmp = fdasrvf::h_to_gam(t((saltelliMC[, (M + 2):nMV] / C)))
-        }
-        for (jj in 1:N) {
-          ftmp = saltelliMC[jj, 1:(M + 1)]
-          ftmp = cumtrapzmid(time,
-                             ftmp[1:M] * abs(ftmp[1:M]),
-                             sign(ftmp[M + 1]) * (ftmp[M + 1]^2),
-                             mididx)
-          post_samples[jj, ] = fdasrvf::warp_f_gamma(ftmp, time, gamtmp[, jj])
-        }
-
-        saltelliMC = post_samples
-        nMV = M
-        rm("post_samples")
-
-      }
-    }
-
-    modA = saltelliMC[1:nMC, ]
-    modB = saltelliMC[(nMC + 1):(nMC * 2), ]
-    modAB = list()
-    for (i in 1:p) {
-      modAB[[i]] = saltelliMC[((2 + (i - 1)) * nMC + 1):((3 + (i - 1)) * nMC), ]
-    }
-
-    varTotal = apply(saltelliMC, 2, var)
-    rm("saltelliMC")
-
-    firstOrder = array(0, dim = c(nSamples, p, nMV))
+    firstOrder = NULL
     totalOrder = NULL
-    if (totalSobol) {
-      totalOrder = array(0, dim = c(nSamples, p, nMV))
-    }
-    for (j in 1:p) {
-      firstOrder[, j, ] = apply(modB * (modAB[[j]] - modA), 2, mean)
-      if (totalSobol) {
-        totalOrder[, j, ] = 0.5 * apply((modA - modAB[[j]])^2, 2, mean)
+    varTotal = NULL
+
+    for (idxMC in 1:nSamplesMC) {
+      mcMat = matrix(saltelliMC[idxMC, , ],
+                     nrow = dim(saltelliMC)[2],
+                     ncol = dim(saltelliMC)[3])
+      meanS = colMeans(mcMat)
+      mcMat = mcMat - matrix(meanS, nrow(mcMat), ncol(mcMat), byrow = TRUE)
+
+      if ((basisType == 'jfpca') || (basisType == 'jfpcah')) {
+        mcMat = .sobolElasticWarp(mcMat, object, basisType, nMV)
       }
+      nMVout = ncol(mcMat)
+
+      if (is.null(firstOrder)) {
+        firstOrder = array(0, dim = c(nSamplesMC, p, nMVout))
+        if (totalSobol) {
+          totalOrder = array(0, dim = c(nSamplesMC, p, nMVout))
+        }
+        varTotal = matrix(0, nSamplesMC, nMVout)
+      }
+
+      modA = mcMat[1:nMC, , drop = FALSE]
+      modB = mcMat[(nMC + 1):(nMC * 2), , drop = FALSE]
+
+      varTotal[idxMC, ] = apply(mcMat, 2, var)
+
+      for (j in 1:p) {
+        modAB = mcMat[((2 + (j - 1)) * nMC + 1):((3 + (j - 1)) * nMC), , drop = FALSE]
+        firstOrder[idxMC, j, ] = colMeans(modB * (modAB - modA))
+        if (totalSobol) {
+          totalOrder[idxMC, j, ] = 0.5 * colMeans((modA - modAB)^2)
+        }
+      }
+      rm(mcMat, modA, modB)
     }
+    nMV = dim(firstOrder)[3]
+    rm("saltelliMC")
 
     # Truncate at zero (machine precision can give negative values)
     firstOrder[firstOrder < 0] <- 0
+
+    varTotal = colMeans(varTotal)
 
     # Ensure total variance >= sum of first order terms
     firstOrderSum = apply(apply(firstOrder, 2:3, mean), 2, sum)
     varTotal = apply(rbind(varTotal, firstOrderSum), 2, max)
 
-    # tmp = t(replicate(p, c(varTotal)))
     out = list(
       firstOrderSobol = firstOrder,
       totalOrderSobol = totalOrder,
       varTotal = varTotal,
-      # sobolProp = firstOrder / aperm(replicate(nSamples, tmp), c(3, 1, 2)),
       nMV = nMV,
       p = p
     )
@@ -220,6 +226,48 @@ mvSobol = function (object,
   }
 
   return(out)
+}
+
+# Map jfpca/jfpcah posterior draws back to the aligned function space, so that
+# Sobol' indices are computed on the functions rather than on the joint
+# (function, warping) representation.
+.sobolElasticWarp = function(mcMat, object, basisType, nMV) {
+  C = object$basisInfo$basisConstruct$C
+  N = nrow(mcMat)
+
+  if (nMV %% 2 == 0) {
+    M = floor(nMV / 2)
+    idxWarp = (M + 1):nMV
+  } else {
+    M = floor((nMV - 1) / 2)
+    idxWarp = (M + 2):nMV
+  }
+  time = seq(0, 1, length.out = M)
+  postSamples = array(0, dim = c(N, M))
+
+  if (basisType == 'jfpca') {
+    gamtmp = fdasrvf::v_to_gam(t(mcMat[, idxWarp, drop = FALSE] / C))
+  } else {
+    gamtmp = fdasrvf::h_to_gam(t(mcMat[, idxWarp, drop = FALSE] / C))
+  }
+
+  if (nMV %% 2 == 0) {
+    for (jj in 1:N) {
+      postSamples[jj, ] = fdasrvf::warp_f_gamma(mcMat[jj, 1:M], time, gamtmp[, jj])
+    }
+  } else {
+    mididx = object$basisInfo$basisConstruct$id
+    for (jj in 1:N) {
+      ftmp = mcMat[jj, 1:(M + 1)]
+      ftmp = cumtrapzmid(time,
+                         ftmp[1:M] * abs(ftmp[1:M]),
+                         sign(ftmp[M + 1]) * (ftmp[M + 1]^2),
+                         mididx)
+      postSamples[jj, ] = fdasrvf::warp_f_gamma(ftmp, time, gamtmp[, jj])
+    }
+  }
+
+  return(postSamples)
 }
 
 #' @title Plot Sobol Decomposition
@@ -279,6 +327,12 @@ plot.sobol = function(x,
 
   p = x$p
 
+  # Decided up front, since it determines the number of panels below
+  if (totalSobol && is.null(x$totalOrderSobol)) {
+    warning("'x' does not have totalOrderSobol")
+    totalSobol = FALSE
+  }
+
   if (is.null(idxMV)) {
     idxMV = 1:x$nMV
   }
@@ -307,7 +361,10 @@ plot.sobol = function(x,
     lwdLegend = c(lwdLegend, 1)
   }
 
-  firstOrder = apply(x$firstOrderSobol, c(2, 3), mean)
+  # matrix() keeps p x nMV even when p == 1
+  firstOrder = matrix(apply(x$firstOrderSobol, c(2, 3), mean),
+                      nrow = p,
+                      ncol = x$nMV)
 
   firstOrderRel = t(t(firstOrder) / x$varTotal)
   oldpar <- par(no.readonly = TRUE)
@@ -323,7 +380,9 @@ plot.sobol = function(x,
       firstOrderRel,
       1.0 - apply(firstOrderRel, 2, sum)
     )
-    sens = t(apply(meanX, 2, cumsum))
+    # t(apply(..., cumsum)) collapses to a vector when there is only one row
+    sens = matrix(apply(meanX, 2, cumsum), nrow = p + 1, ncol = x$nMV)
+    sens = t(sens)
 
     plot(
       idxMV,
@@ -337,7 +396,7 @@ plot.sobol = function(x,
       ylab = "Relative First-Order Sobol' Index"
     )
     polygon(c(idxMV, rev(idxMV)), c(rep(0, x$nMV), rev(sens[, 1])), col = cmap[1])
-    for (j in 2:p) {
+    for (j in seq_len(p - 1) + 1) {
       polygon(c(idxMV, rev(idxMV)), c(sens[, j - 1], rev(sens[, j])), col = cmap[j])
     }
     lines(idxMV, sens[, p + 1], type = "l", col = "grey")
@@ -357,7 +416,7 @@ plot.sobol = function(x,
       ylim = c(0, 1),
       xlim = c(min(idxMV), max(idxMV))
     )
-    for (j in 2:p) {
+    for (j in seq_len(p - 1) + 1) {
       lines(
         idxMV,
         firstOrderRel[j, ],
@@ -384,7 +443,8 @@ plot.sobol = function(x,
   }
 
   if (waterfall) {
-    sensVar = t(rbind(apply(firstOrder, 2, cumsum), x$varTotal))
+    sensVar = t(rbind(matrix(apply(firstOrder, 2, cumsum), nrow = p, ncol = x$nMV),
+                      x$varTotal))
 
     plot(
       idxMV,
@@ -398,7 +458,7 @@ plot.sobol = function(x,
       ylab = "First-Order Sobol' Index"
     )
     polygon(c(idxMV, rev(idxMV)), c(rep(0, x$nMV), rev(sensVar[, 1])), col = cmap[1])
-    for (j in 2:p) {
+    for (j in seq_len(p - 1) + 1) {
       polygon(c(idxMV, rev(idxMV)), c(sensVar[, j - 1], rev(sensVar[, j])), col = cmap[j])
     }
     lines(idxMV, sensVar[, p + 1], type = "l", col = "grey")
@@ -417,7 +477,7 @@ plot.sobol = function(x,
       ylim = c(0, max(firstOrder)*1.1),
       xlim = c(min(idxMV), max(idxMV))
     )
-    for (j in 2:p) {
+    for (j in seq_len(p - 1) + 1) {
       lines(
         idxMV,
         firstOrder[j, ],
@@ -459,15 +519,11 @@ plot.sobol = function(x,
   )
 
   # total sobol plot
-  if (is.null(x$totalOrderSobol)) {
-    warning(
-      "'x' does not have totalOrderSobol"
-    )
-    totalSobol = FALSE
-  }
   if (totalSobol) {
 
-    totalOrder = apply(x$totalOrderSobol, c(2, 3), mean)
+    totalOrder = matrix(apply(x$totalOrderSobol, c(2, 3), mean),
+                        nrow = p,
+                        ncol = x$nMV)
 
     plot(
       idxMV,
@@ -482,7 +538,7 @@ plot.sobol = function(x,
       ylim = c(0, max(totalOrder) * 1.05),
       xlim = c(min(idxMV), max(idxMV))
     )
-    for (j in 2:p) {
+    for (j in seq_len(p - 1) + 1) {
       lines(
         idxMV,
         totalOrder[j, ],

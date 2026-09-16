@@ -141,7 +141,6 @@ rsobol = function(fn = "fiftysobol.col",
   ans = array(0, c(n, s, M))             # n obs x s dimensions x M bits
   a   = .rsobol.sobomats(fn, m, s, M)
 
-  bits = rep(0, M)
   for (i in 1:n) {
     bitsi = .rsobol.int2bits(i - 1, M)   # bits of integer i-1 used for observation i
     for (j in 1:s) {
@@ -269,7 +268,7 @@ rsobol = function(fn = "fiftysobol.col",
   #
   M = diag(J) # Identity
   C = runif(J) > 0.5
-  for (i in 2:J)
+  for (i in seq_len(J - 1) + 1)     # no strictly-lower entries when J == 1
     for (j in 1:(i - 1))
       M[i, j] = runif(1) > 0.5
   list(M = M, C = C^2)             # squaring turns boolean into binary
@@ -339,7 +338,7 @@ rsobol = function(fn = "fiftysobol.col",
   #
   # Warning: these points are not randomized!
 
-  data <- system.file("data", fn, package = "mvBayes")
+  data <- system.file("extdata", fn, package = "mvBayes")
   col = utils::read.table(data)
   if (s > nrow(col))
     stop(paste(
@@ -358,9 +357,8 @@ rsobol = function(fn = "fiftysobol.col",
 
   n = 2^m
   ans = matrix(0, n, s)
-  bits = rep(0, M)
   for (i in 1:n) {
-    bitsi = .rsobol.int2bits(i - 1)
+    bitsi = .rsobol.int2bits(i - 1, M)
     for (j in 1:s) {
       bitsj = a[j, , ] %*% bitsi
       for (k in 1:M)
@@ -453,7 +451,7 @@ rsobol = function(fn = "fiftysobol.col",
     lines(rep(j / vn, 2), c(0, 1), ...)
 }
 
-.rsobol.testgrids = function(fn = "rsobolgridtest.pdf", m = 8) {
+.rsobol.testgrids = function(m = 8) {
   # This plots some pairs of variables with grid lines
   # Grid cells do not always have one point each because
   # the Sobol' nets may have t>0
@@ -508,7 +506,12 @@ rsobol = function(fn = "fiftysobol.col",
     lenus = apply(vals, 2, lenu)
     if (any(lenus != n)) {
       allok = FALSE
+      if (verbose)
+        message(sprintf("Stratification failed for m = %d", m))
+    } else if (verbose) {
+      message(sprintf("Stratification ok for m = %d", m))
     }
   }
 
+  allok
 }
