@@ -72,8 +72,7 @@ fit.mvBayes <- function(object, nCores = 1, ...) {
       out <- object$bayesModel(object$X, object$basisInfo$coefs[, k], ...)
       return(out)
     }, error = function(e) {
-      message(sprintf("Error fitting model %d: %s", k, e$message))
-      return(NULL)
+      return(structure(list(message = conditionMessage(e)), class = "mvBayesFitError"))
     })
   }
 
@@ -96,8 +95,27 @@ fit.mvBayes <- function(object, nCores = 1, ...) {
     )
   }
 
+  # Fail fast: a NULL component would only produce a cryptic error downstream
+  idxFailed <- which(sapply(object$bmList, function(bm)
+    methods::is(bm, "mvBayesFitError")))
+  if (length(idxFailed) > 0) {
+    stop(
+      paste0(
+        "'bayesModel' failed to fit ",
+        length(idxFailed),
+        " of ",
+        object$basisInfo$nBasis,
+        " basis components. First failure (component ",
+        idxFailed[1],
+        "): ",
+        object$bmList[[idxFailed[1]]]$message
+      ),
+      call. = FALSE
+    )
+  }
+
   object <- .getSamples(object)
-  object <- .getResidSD(object, nCores)
+  object <- .getResidSD(object)
 
   object$nSamples <- length(object$bmList[[1]]$samples$residSD)
 
@@ -108,7 +126,8 @@ fit.mvBayes <- function(object, nCores = 1, ...) {
   nCores <- min(nCores, object$basisInfo$nBasis)
   nCoresAvailable <- parallel::detectCores()
 
-  if (nCores > nCoresAvailable) {
+  # detectCores() returns NA when the core count cannot be determined
+  if (!is.na(nCoresAvailable) && (nCores > nCoresAvailable)) {
     message(sprintf(
       "Only %d cores are available. Using all available cores.",
       nCoresAvailable
@@ -138,16 +157,20 @@ fit.mvBayes <- function(object, nCores = 1, ...) {
   return(object)
 }
 
-.getResidSD.mvBayes <- function(object, nCores) {
+.getResidSD.mvBayes <- function(object) {
   if (is.null(object$residSDExtract)) {
     if (!("residSD" %in% names(object$bmList[[1]]$samples))) {
       message("Approximating 'residSD', since 'residSDExtract' is None")
+      # No extra arguments here: anything passed through '...' would be
+      # forwarded to the user's predict.bayesModel method.
       postCoefs <- predict(object,
                            object$X,
-                           nCores = nCores,
                            returnPostCoefs = TRUE)$postCoefs
+      nSamples <- dim(postCoefs)[1]
       for (k in 1:length(object$bmList)) {
-        resid <- object$basisInfo$coefs[, k] - t(postCoefs[, , k])
+        # matrix() keeps the nSamples dimension when nSamples == 1
+        postCoefsK <- matrix(postCoefs[, , k], nrow = nSamples)
+        resid <- t(postCoefsK) - object$basisInfo$coefs[, k]
         object$bmList[[k]]$samples$residSD <- apply(resid, 2, sd)
       }
     }
@@ -236,18 +259,12 @@ predict.mvBayes = function(object,
     postCoefs <- array(postCoefs, dim = c(nSamples, ntest, nBasis))
 
     PNS = object$basisInfo$basisConstruct
-    N = dim(postCoefs)[1] * dim(postCoefs)[2]
-    nBasis = object$basisInfo$nBasis
+    N = nSamples * ntest
     inmat = matrix(0, length(PNS$PNS$radii), N)
     inmat[1:nBasis, ] = t(array(postCoefs, dim = c(N, nBasis)))
-    YtruncStandard = fdasrvf::fastPNSe2s(inmat, PNS)
-    if (nSamples == 1) {
-      Ypost = array(YtruncStandard, dim = c(ntest, nMV)) * object$basisInfo$radius
-      Ypost = t(Ypost)
-    } else {
-      Ypost = array(YtruncStandard, dim = c(nSamples, ntest, nMV)) * object$basisInfo$radius
-      Ypost = aperm(Ypost, c(3, 2, 1))
-    }
+    YtruncStandard = as.matrix(fdasrvf::fastPNSe2s(inmat, PNS))
+    Ypost = array(YtruncStandard, dim = c(nSamples, ntest, nMV)) * object$basisInfo$radius
+    Ypost = aperm(Ypost, c(3, 2, 1))
     rm(YtruncStandard)
   } else {
     postCoefs_k <- predictBayesModel(1)
@@ -277,22 +294,14 @@ predict.mvBayes = function(object,
     Ypost <- Ypost * object$basisInfo$Yscale + object$basisInfo$Ycenter
   }
 
-  if (is.matrix(Ypost)) {
-    Ypost = t(Ypost)
-  } else {
-    Ypost = aperm(Ypost, 3:1)
-  }
+  # Ypost is always c(nSamples, ntest, nMV), including when nSamples == 1
+  Ypost = aperm(Ypost, 3:1)
 
   if (addTruncError) {
     idx = sample(nrow(object$basisInfo$truncError),
                  size = nSamples * ntest,
                  replace = TRUE)
-    if (nSamples == 1){
-      truncError = array(object$basisInfo$truncError[idx, ], dim = c(ntest, nMV))
-    } else {
-      truncError = array(object$basisInfo$truncError[idx, ], dim = c(nSamples, ntest, nMV))
-    }
-
+    truncError = array(object$basisInfo$truncError[idx, ], dim = c(nSamples, ntest, nMV))
     Ypost = Ypost + truncError
   }
 
@@ -318,12 +327,12 @@ predict.mvBayes = function(object,
 #' @export
 #' @import graphics
 #'
-traceplot = function(object,
-                     modelParams = NULL,
-                     labels = NULL,
-                     title = NULL,
-                     file = NULL,
-                     ...) {
+traceplot.mvBayes = function(object,
+                             modelParams = NULL,
+                             labels = NULL,
+                             title = NULL,
+                             file = NULL,
+                             ...) {
   # Extract bmList and nBasis from the object
   nBasis <- object$basisInfo$nBasis
 
@@ -347,6 +356,11 @@ traceplot = function(object,
 
   if (is.null(labels)) {
     labels <- modelParams
+  }
+
+  if (length(modelParams) == 0) {
+    warning("No plottable parameters found in 'object$bmList[[1]]$samples'.")
+    return(invisible(NULL))
   }
 
   nParams <- length(modelParams)
@@ -456,6 +470,13 @@ plot.mvBayes <- function(x,
     Xtest <- x$X
   } else if (useYtrain) {
     message("Model output at user-specified Xtest is being compared to training responses Y.")
+  }
+
+  if (nrow(Xtest) != nrow(if (useYtrain) .getY(x$basisInfo) else Ytest)) {
+    stop(
+      "'Xtest' and 'Ytest' must have the same number of rows (using the training data for whichever is NULL).",
+      call. = FALSE
+    )
   }
 
   if (useYtrain) {
@@ -615,8 +636,6 @@ plot.mvBayes <- function(x,
       )) * x$basisInfo$Yscale) # all residuals
     }
   }
-
-  mseOrder <- order(mseBasis, decreasing = TRUE)
 
   rgbCmap = grDevices::col2rgb('grey')
   col = grDevices::rgb(rgbCmap[1] / 255, rgbCmap[2] / 255, rgbCmap[3] / 255, alpha = 0.5)

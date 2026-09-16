@@ -77,8 +77,8 @@ mvBayesElastic = function(bayesModel,
   return(.getSamples.mvBayes(object))
 }
 
-.getResidSD.mvBayesElastic <- function(object, nCores) {
-  return(.getResidSD.mvBayes(object, nCores))
+.getResidSD.mvBayesElastic <- function(object) {
+  return(.getResidSD.mvBayes(object))
 }
 
 #' @export
@@ -89,21 +89,21 @@ fit.mvBayesElastic = function(object, nCores = 1, ...) {
 #' @export
 predict.mvBayesElastic = function(object,
                                   Xtest,
-                                  idxSamples = "all",
+                                  idxSamples = "default",
                                   addResidError = FALSE,
                                   addTruncError = FALSE,
                                   returnPostCoefs = FALSE,
-                                  nCores = 1,
+                                  idxSamplesArg = NULL,
                                   ...) {
   return(
     predict.mvBayes(
       object,
       Xtest,
-      idxSamples,
-      addResidError,
-      addTruncError,
-      returnPostCoefs,
-      nCores,
+      idxSamples = idxSamples,
+      addResidError = addResidError,
+      addTruncError = addTruncError,
+      returnPostCoefs = returnPostCoefs,
+      idxSamplesArg = idxSamplesArg,
       ...
     )
   )
@@ -122,14 +122,19 @@ plot.mvBayesElastic = function(x,
                                file = NULL,
                                ...) {
   return(plot.mvBayes(x,
-                      Xtest = NULL,
-                      Ytest = NULL,
-                      idxSamples = "final",
-                      nPlot = NULL,
-                      idxMV = NULL,
-                      xscale = "linear",
-                      xlabel = "Multivariate Index",
-                      title = NULL,
-                      file = NULL,
+                      Xtest = Xtest,
+                      Ytest = Ytest,
+                      idxSamples = idxSamples,
+                      nPlot = nPlot,
+                      idxMV = idxMV,
+                      xscale = xscale,
+                      xlabel = xlabel,
+                      title = title,
+                      file = file,
                       ...))
+}
+
+#' @export
+traceplot.mvBayesElastic = function(object, ...) {
+  return(traceplot.mvBayes(object, ...))
 }

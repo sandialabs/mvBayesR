@@ -12,6 +12,7 @@
 #' @param coverageTarget level of coverage desired (default: 0.95)
 #' @param idxSamples which samples to use in CV (default: "all")
 #' @param uqTruncMethod method to use for UQ truncation (c("gaussian", "empirical"))
+#' @param warpData `time_warping` object from `fdasrvf`. If supplied, \link{mvBayesElastic} is used instead of \link{mvBayes}, and each fold is aligned using the corresponding columns of `warpData`.
 #' @param ... Additional arguments to mvBayes, including arguments to bayesModel.
 #' @details First separates the data into randomly chosen test and training sets (user-specified train/test splits and k-fold cv are forthcoming), then fits mvBayes(bayesModel, X, Y, ...) to the training set and evaluates predictive performance on the test set. Repeats this process nRep times.
 #' @return An object of class "mvBayesCV", which is a list containing the out-of-sample rmse for each replication, the fitting and prediction times, and the function call. Other prediction metrics, including coverage of prediction intervals, are forthcoming.
@@ -28,6 +29,7 @@ mvCV = function(bayesModel,
                      coverageTarget = 0.95,
                      idxSamples = "all",
                      uqTruncMethod = c("gaussian", "empirical"),
+                     warpData = NULL,
                      ...) {
   if (!is.null(seed)) {
     set.seed(seed)
@@ -35,12 +37,10 @@ mvCV = function(bayesModel,
 
   # setup
   n = nrow(X)
-  p = ncol(X)
-  nMV = ncol(Y)
 
   alpha = 1 - coverageTarget
 
-  uqTruncMethod = uqTruncMethod[1]
+  uqTruncMethod = match.arg(uqTruncMethod)
 
   if (is.null(kFolds)) {
     if (is.null(nTest)) {
@@ -66,7 +66,9 @@ mvCV = function(bayesModel,
     idxTest = lapply(1:nRep, function(r)
       sample(n, size = nTest)) # different test set for every rep
     nTest = rep(nTest, nRep)
-    nTrain = n - nTest
+    # nTrain is honored as given: it may be smaller than n - nTest, in which
+    # case the training set is a subsample of the non-test observations
+    nTrain = rep(nTrain, nRep)
     idxRemaining = lapply(idxTest, function(idx)
       setdiff(1:n, idx)) # remaining indices after test set is determined
     idxTrain = lapply(1:nRep, function(r)
@@ -96,79 +98,70 @@ mvCV = function(bayesModel,
     Ytest = Y[idxTest[[r]], ,drop = F]
 
     # Fit models
-    if (methods::hasArg("warp_data")) {
-      startFit = Sys.time()
-      fit = mvBayesElastic(bayesModel, Xtrain, Ytrain, idx = idxTrain[[r]], ...)
-      fitTime[r] = as.numeric(Sys.time() - startFit, units = "secs")
+    useElastic = !is.null(warpData)
+    startFit = Sys.time()
+    if (useElastic) {
+      fit = mvBayesElastic(
+        bayesModel,
+        Xtrain,
+        Ytrain,
+        warpData = warpData,
+        idx = idxTrain[[r]],
+        ...
+      )
     } else {
-      startFit = Sys.time()
       fit = mvBayes(bayesModel, Xtrain, Ytrain, ...)
-      fitTime[r] = as.numeric(Sys.time() - startFit, units = "secs")
     }
+    fitTime[r] = as.numeric(Sys.time() - startFit, units = "secs")
 
     # Calculate rmse of posterior mean
     start_pred = Sys.time()
     preds = predict(fit, Xtest)
     if (idxSamples[1] != "all") {
-      preds = preds[idxSamples, , ]
+      if (identical(idxSamples, "final")) {
+        idxSamplesUse = dim(preds)[1]
+      } else if (is.numeric(idxSamples)) {
+        idxSamplesUse = idxSamples
+      } else {
+        stop("'idxSamples' must be 'all', 'final', or numeric.")
+      }
+      # drop=FALSE keeps the nSamples dimension for a single index
+      preds = preds[idxSamplesUse, , , drop = FALSE]
     }
     predictTime[r] = as.numeric(Sys.time() - start_pred, units = "secs")
 
-    Yhat = apply(preds, 2:3, median)
-    if (methods::hasArg("warp_data")) {
-      tmp = as.list(match.call())[-1]
-      call.envir = parent.frame(1)
-      if (fit$basisInfo$basisType == "jfpca")
-      {
-        C = fit$basisInfo$basisConstruct$C
-        id = fit$basisInfo$basisConstruct$id
-        srvf = fit$basisInfo$basisConstruct$srvf
-        if (srvf) {
-          m_new = sign(eval(tmp$warp_data, envir = call.envir)$fn[id, idxTest[[r]]]) * sqrt(abs(eval(tmp$warp_data, envir =
-                                                                                                       call.envir)$fn[id, idxTest[[r]]]))
-          qn = fdasrvf::f_to_srvf(
-            eval(tmp$warp_data, envir = call.envir)$fn[, idxTest[[r]]],
-            fit$basisInfo$basisConstruct$time
-          )
-          qn1 = rbind(qn, m_new)
-        } else {
-          qn1 = eval(tmp$warp_data, envir = call.envir)$fn[, idxTest[[r]]]
-        }
+    Yhat = matrix(apply(preds, 2:3, median),
+                  nrow = dim(preds)[2],
+                  ncol = dim(preds)[3])
+    if (useElastic) {
+      basisType = fit$basisInfo$basisType
+      C = fit$basisInfo$basisConstruct$C
+      id = fit$basisInfo$basisConstruct$id
+      srvf = fit$basisInfo$basisConstruct$srvf
 
+      fnTest = warpData$fn[, idxTest[[r]], drop = FALSE]
+      if (srvf) {
+        m_new = sign(fnTest[id, ]) * sqrt(abs(fnTest[id, ]))
+        qn = fdasrvf::f_to_srvf(fnTest, fit$basisInfo$basisConstruct$time)
+        qn1 = rbind(qn, m_new)
+      } else {
+        qn1 = fnTest
+      }
+
+      gamTest = warpData$warping_functions[, idxTest[[r]], drop = FALSE]
+
+      if (basisType == "jfpca") {
         time = seq(0, 1, length.out = ncol(Ytest))
         binsize <- mean(diff(time))
-        psi = matrix(0, ncol(Ytest), nrow(Ytest))
         vec = matrix(0, ncol(Ytest), nrow(Ytest))
         for (i in 1:nrow(Ytest)) {
-          psi[, i] = sqrt(fdasrvf::gradient(
-            eval(tmp$warp_data, envir = call.envir)$warping_functions[, idxTest[[r]][i]],
-            binsize
-          ))
-          vec[, i] <- fdasrvf::inv_exp_map(fit$basisInfo$basisConstruct$mu_psi, psi[, i])
+          psi = sqrt(fdasrvf::gradient(gamTest[, i], binsize))
+          vec[, i] <- fdasrvf::inv_exp_map(fit$basisInfo$basisConstruct$mu_psi, psi)
         }
-
         Ytest = t(rbind(qn1, C * vec))
-
-      } else if (fit$basisInfo$basisType == "jfpcah") {
-        C = fit$basisInfo$basisConstruct$C
-        id = fit$basisInfo$basisConstruct$id
-        srvf = fit$basisInfo$basisConstruct$srvf
-        if (srvf) {
-          m_new = sign(eval(tmp$warp_data, envir = call.envir)$fn[id, idxTest[[r]]]) * sqrt(abs(eval(tmp$warp_data, envir =
-                                                                                                       call.envir)$fn[id, idxTest[[r]]]))
-          qn = fdasrvf::f_to_srvf(
-            eval(tmp$warp_data, envir = call.envir)$fn[, idxTest[[r]]],
-            fit$basisInfo$basisConstruct$time
-          )
-          qn1 = rbind(qn, m_new)
-        } else {
-          qn1 = eval(tmp$warp_data, envir = call.envir)$fn[, idxTest[[r]]]
-        }
-
-        h = fdasrvf::gam_to_h(eval(tmp$warp_data, envir = call.envir)$warping_functions[, idxTest[[r]]])
-
+      } else if (basisType == "jfpcah") {
+        h = fdasrvf::gam_to_h(gamTest)
         Ytest = t(rbind(qn1, C * h))
-
       }
     }
     rmse[r] = sqrt(mean((Ytest - Yhat)^2))
@@ -204,7 +197,10 @@ mvCV = function(bayesModel,
     }
     residError = array(dim = dim(preds))
     for (idxMCMC in 1:dim(preds)[1]) {
-      residError[idxMCMC, , ] = coefsResidError[idxMCMC, , ] %*% t(t(fit$basisInfo$basis) * fit$basisInfo$Yscale)
+      coefsResidErrorMC = matrix(coefsResidError[idxMCMC, , ],
+                                 nrow = dim(preds)[2],
+                                 ncol = fit$basisInfo$nBasis)
+      residError[idxMCMC, , ] = coefsResidErrorMC %*% t(t(fit$basisInfo$basis) * fit$basisInfo$Yscale)
     }
     rm(coefsResidError)
     preds = preds + residError
@@ -227,11 +223,10 @@ mvCV = function(bayesModel,
     # Calculate distance from posterior mean
     distBound = numeric(dim(preds)[2])
     for (idx in 1:dim(preds)[2]) {
-      distSamples = sqrt(apply(
-        (t(preds[, idx, ]) - Yhat[idx, ])^2,
-        2,
-        mean
-      ))
+      predsIdx = matrix(preds[, idx, ], nrow = nSamples, ncol = dim(preds)[3])
+      distSamples = sqrt(rowMeans((predsIdx - matrix(
+        Yhat[idx, ], nSamples, dim(preds)[3], byrow = TRUE
+      ))^2))
       distBound[idx] = quantile(distSamples, coverageTarget)
     }
     distTest = sqrt(apply((Ytest - Yhat)^2, 1, mean))

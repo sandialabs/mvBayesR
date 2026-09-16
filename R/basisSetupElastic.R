@@ -71,19 +71,29 @@ basisSetupElastic = function(Y,
   }
 
   propVarCumSum = cumsum(out$varExplained) / sum(out$varExplained)
-  if (basisType == 'jfpcah') {
-    nBasis = ncol(basis)
-  } else if (is.null(nBasis)) {
-    nBasis = which(propVarCumSum >= propVarExplained)[1]
-  } else if (nBasis > length(out$varExplained)) {
-    nBasis = length(out$varExplained)
+  nBasisAvailable = min(ncol(basis), ncol(basisConstruct$coef))
+  if (is.null(nBasis)) {
+    if (basisType == 'jfpcah') {
+      # jointFPCAh already truncated to propVarExplained
+      nBasis = nBasisAvailable
+    } else {
+      nBasis = which(propVarCumSum >= propVarExplained)[1]
+      if (is.na(nBasis)) {
+        nBasis = nBasisAvailable
+      }
+      nBasis = min(nBasis, nBasisAvailable)
+    }
+  } else if (nBasis > nBasisAvailable) {
     warning(
       paste0(
-        "User-specified 'nBasis' larger than the number of jfpcah bases. Setting nBasis=",
-        nBasis,
+        "User-specified 'nBasis' larger than the number of ",
+        basisType,
+        " bases. Setting nBasis=",
+        nBasisAvailable,
         "."
       )
     )
+    nBasis = nBasisAvailable
   }
 
   out$nBasis = nBasis
@@ -93,7 +103,9 @@ basisSetupElastic = function(Y,
   coefs = basisConstruct$coef
   out$nMV = ncol(out$YjointElastic)
 
-  out$basis = basis[, 1:nBasis, drop = FALSE]
+  # basis is stored with one row per component, matching basisSetup(), so that
+  # getYtrunc() can compute coefs %*% basis
+  out$basis = t(basis[, 1:nBasis, drop = FALSE])
   out$coefs = coefs[, 1:nBasis, drop = FALSE]
   YjointElasticTrunc = getYtrunc(out)
   out$truncError = out$YjointElastic - YjointElasticTrunc
@@ -118,35 +130,24 @@ getCoefs.basisSetupElastic = function(object, Ytest = NULL) {
   if (is.null(Ytest)) {
     return(object$coefs)
   } else{
-    # TODO: Figure out how this is done in R version of fdasrvf. For now, guessing from python...
-    object$basisConstruct$new_coef = object$basisConstruct$project(t(Ytest))
-    return(object$basisConstruct$new_coef[, 1:object$nBasis])
+    stop(
+      "Projecting new responses onto an elastic basis is not supported: 'fdasrvf' provides no projection method for jfpca/jfpcah bases. Re-run the elastic alignment on the new data instead.",
+      call. = FALSE
+    )
   }
 }
 
 #' @export
 preprocessY.basisSetupElastic = function(object,
                                          Ytest = NULL,
-                                         projectNew = FALSE,
                                          ...) {
   if (is.null(Ytest)) {
     return(.getY(object))
   } else{
-    if (projectNew || !('new_coef' %in% names(object$basisConstruct))) {
-      object$basisConstruct$new_coef = object$basisConstruct$project(t(Ytest))
-    }
-
-    if (object$basisType == 'jfpca') {
-      YtestPreprocessed = t(object$basisConstruct$new_g)
-    } else if (object$basisType == 'jfpcah') {
-      YtestPreprocessed = t(
-        cbind(
-          object$basisConstruct$new_qn1,
-          object$basisConstruct$C * object$basisConstruct$new_h
-        )
-      )
-    }
-    return(YtestPreprocessed)
+    stop(
+      "Preprocessing new responses with an elastic basis is not supported: 'fdasrvf' provides no projection method for jfpca/jfpcah bases. Re-run the elastic alignment on the new data instead.",
+      call. = FALSE
+    )
   }
 }
 

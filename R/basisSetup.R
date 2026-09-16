@@ -60,6 +60,11 @@ basisSetup = function(Y,
 
     cs.psi = cumsum(varExplained.psi) / sum(varExplained.psi)
     n.pc = which(cs.psi >= propVarExplained)[1]
+    if (is.na(n.pc)) {
+      n.pc = length(varExplained.psi)
+    }
+    # fdasrvf::fastpns() cannot build a single-component decomposition
+    n.pc = max(n.pc, 2)
     if (!is.null(nBasis) && nBasis > n.pc) {
       cli::cli_alert_info("Reducing computation to {n.pc} pns components...")
       nBasis = n.pc
@@ -122,9 +127,29 @@ basisSetup = function(Y,
     stop("un-supported basisType")
   }
 
+  # Number of basis vectors actually available (varExplained may carry an extra
+  # entry describing the variance left in the truncation, e.g. custom bases)
+  nBasisAvailable = min(nrow(basis), ncol(coefs))
+
   propVarCumSum = cumsum(out$varExplained) / sum(out$varExplained)
   if (is.null(nBasis)) {
-    nBasis = min(which(propVarCumSum > propVarExplained)[1], out$nMV)
+    nBasis = which(propVarCumSum >= propVarExplained)[1]
+    if (is.na(nBasis)) {
+      # propVarExplained not reachable (e.g. propVarExplained == 1 with rounding)
+      nBasis = nBasisAvailable
+    }
+    nBasis = min(nBasis, nBasisAvailable)
+  } else if (nBasis > nBasisAvailable) {
+    warning(
+      paste0(
+        "User-specified 'nBasis' is larger than the ",
+        nBasisAvailable,
+        " available basis vectors. Setting nBasis=",
+        nBasisAvailable,
+        "."
+      )
+    )
+    nBasis = nBasisAvailable
   }
   out$nBasis = nBasis
   out$propVarExplained = propVarCumSum[nBasis]
@@ -155,10 +180,10 @@ getYtrunc.basisSetup = function(object,
   }
   if (object$basisType == 'pns') {
     inmat = array(0, dim = c(length(object$basisConstruct$PNS$radii), nrow(coefs)))
-    inmat[1:nBasis, ] = t(coefs[, 1:nBasis])
+    inmat[1:nBasis, ] = t(coefs[, 1:nBasis, drop = FALSE])
     YtruncStandard = fdasrvf::fastPNSe2s(inmat, object$basisConstruct) * object$radius
   } else {
-    YtruncStandard = coefs %*% object$basis
+    YtruncStandard = coefs[, 1:nBasis, drop = FALSE] %*% object$basis[1:nBasis, , drop = FALSE]
   }
 
   if (length(object$Yscale) > 1) {
@@ -236,7 +261,8 @@ plot.basisSetup = function(x,
   if (is.null(nBasis)) {
     nBasis = which(cs >= propVarExplained)[1]
   }
-  if (nBasis > length(x$varExplained)) {
+  # Only the first x$nBasis basis vectors were retained by basisSetup()
+  if (is.na(nBasis) || (nBasis > x$nBasis)) {
     nBasis = x$nBasis
   }
 
@@ -358,9 +384,10 @@ plot.basisSetup = function(x,
   )
 
   # Percent variance explained plot
-  nMV = ncol(x$Y)
   varTotal = sum(x$varExplained)
-  propVarTruncCS = cumsum(x$varExplained[(nBasis + 1):nMV] / varTotal)
+  # No truncated components when nBasis covers everything varExplained describes
+  idxTrunc = seq_len(length(x$varExplained) - nBasis) + nBasis
+  propVarTruncCS = cumsum(x$varExplained[idxTrunc] / varTotal)
   propVarBasis = x$varExplained[1:nBasis] / varTotal
   plot(
     100 * propVarBasis,
@@ -378,12 +405,14 @@ plot.basisSetup = function(x,
     cex.main = 1,
     cex.lab = 0.9
   )
-  points(
-    rep(nBasis + 1, nMV - nBasis),
-    100 * propVarTruncCS,
-    col = 'grey',
-    pch = 19
-  )
+  if (length(propVarTruncCS) > 0) {
+    points(
+      rep(nBasis + 1, length(propVarTruncCS)),
+      100 * propVarTruncCS,
+      col = 'grey',
+      pch = 19
+    )
+  }
   axis(
     side = 1,
     at = 1:(nBasis + 1),

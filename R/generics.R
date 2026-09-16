@@ -24,7 +24,7 @@ fit = function(object, ...) {
 .getSamples = function(object) {
   UseMethod(".getSamples", object)
 }
-.getResidSD = function(object, nCores) {
+.getResidSD = function(object) {
   UseMethod(".getResidSD", object)
 }
 .nCoresAdjust = function(object, nCores) {
@@ -32,7 +32,16 @@ fit = function(object, ...) {
 }
 
 
+#' @title Traceplots from a Bayesian Model Fit
+#'
+#' @description Generic function for plotting traceplots of the parameters of a
+#'   fitted Bayesian model.
+#' @param object A fitted model object, e.g. of class "mvBayes".
+#' @param ... Additional arguments passed to methods.
+#' @return no return value
+#' @seealso \link{traceplot.mvBayes}
+#' @export
+#'
 traceplot = function(object, ...) {
   UseMethod("traceplot")
 }
-

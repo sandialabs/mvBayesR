@@ -17,9 +17,9 @@ Knots_prepare <- function(selected_knots, Time) {
 }
 
 
-basisSplinet <- function(Ystandard, nBasis) {
+basisSplinet <- function(Ystandard) {
   basis = list()
-  stop("This basisType is not ready for CRAN")
+  stop("basisType='splinet' is not available in this release")
   # nMV = ncol(Ystandard)
   # is_Splinets_available <- requireNamespace("Splinets", quietly = TRUE)
   # if (!is_Splinets_available) {

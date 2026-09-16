@@ -16,6 +16,7 @@ mvCV(
   coverageTarget = 0.95,
   idxSamples = "all",
   uqTruncMethod = c("gaussian", "empirical"),
+  warpData = NULL,
   ...
 )
 }
@@ -41,6 +42,8 @@ mvCV(
 \item{idxSamples}{which samples to use in CV (default: "all")}
 
 \item{uqTruncMethod}{method to use for UQ truncation (c("gaussian", "empirical"))}
+
+\item{warpData}{`time_warping` object from `fdasrvf`. If supplied, \link{mvBayesElastic} is used instead of \link{mvBayes}, and each fold is aligned using the corresponding columns of `warpData`.}
 
 \item{...}{Additional arguments to mvBayes, including arguments to bayesModel.}
 }
