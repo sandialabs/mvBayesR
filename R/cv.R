@@ -15,33 +15,33 @@
 #' @param warpData `time_warping` object from `fdasrvf`. If supplied, \link{mvBayesElastic} is used instead of \link{mvBayes}, and each fold is aligned using the corresponding columns of `warpData`.
 #' @param ... Additional arguments to mvBayes, including arguments to bayesModel.
 #' @details First separates the data into randomly chosen test and training sets (user-specified train/test splits and k-fold cv are forthcoming), then fits mvBayes(bayesModel, X, Y, ...) to the training set and evaluates predictive performance on the test set. Repeats this process nRep times.
-#' @return An object of class "mvBayesCV", which is a list containing the out-of-sample rmse for each replication, the fitting and prediction times, and the function call. Other prediction metrics, including coverage of prediction intervals, are forthcoming.
+#' @return An object of class "mvBayesCV", which is a list containing out-of-sample performance metrics for each replication, including rmse, rSquared, coverage, intervalWidth, intervalScore, crps, fitting and prediction times, and the function call.
 #' @seealso \link{mvBayes}, \link{predict.mvBayes} for prediction
 #' @export
 mvCV = function(bayesModel,
-                     X,
-                     Y,
-                     kFolds = NULL,
-                     nRep = 1,
-                     nTrain = NULL,
-                     nTest = NULL,
-                     seed = NULL,
-                     coverageTarget = 0.95,
-                     idxSamples = "all",
-                     uqTruncMethod = c("gaussian", "empirical"),
-                     warpData = NULL,
-                     ...) {
+                X,
+                Y,
+                kFolds = NULL,
+                nRep = 1,
+                nTrain = NULL,
+                nTest = NULL,
+                seed = NULL,
+                coverageTarget = 0.95,
+                idxSamples = "all",
+                uqTruncMethod = c("gaussian", "empirical"),
+                warpData = NULL,
+                ...) {
   if (!is.null(seed)) {
     set.seed(seed)
   }
-
+  
   # setup
   n = nrow(X)
-
+  
   alpha = 1 - coverageTarget
-
+  
   uqTruncMethod = match.arg(uqTruncMethod)
-
+  
   if (is.null(kFolds)) {
     if (is.null(nTest)) {
       if (is.null(nTrain)) {
@@ -61,7 +61,7 @@ mvCV = function(bayesModel,
         stop('Must have nTrain + nTest <= n')
       }
     }
-
+    
     # Get fold indices
     idxTest = lapply(1:nRep, function(r)
       sample(n, size = nTest)) # different test set for every rep
@@ -82,21 +82,21 @@ mvCV = function(bayesModel,
     idxTrain = lapply(idxTest, function(idx)
       setdiff(1:n, idx)) # remaining indices after test set is determined
   }
-
+  
   if (!is.null(seed)) {
     set.seed(NULL) # re-set as if no seed had been set
   }
-
+  
   # Run cv
-    rmse = rSquared = coverage = intervalWidth = intervalScore = energyScore = fitTime = predictTime = numeric(nRep)
+  rmse = rSquared = coverage = intervalWidth = intervalScore = crps = fitTime = predictTime = numeric(nRep)
   for (r in 1:nRep) {
     # Set up train/test split
-    Xtrain = X[idxTrain[[r]], ,drop = F]
-    Ytrain = Y[idxTrain[[r]], ,drop = F]
-
-    Xtest = X[idxTest[[r]], ,drop = F]
-    Ytest = Y[idxTest[[r]], ,drop = F]
-
+    Xtrain = X[idxTrain[[r]], ,drop = FALSE]
+    Ytrain = Y[idxTrain[[r]], ,drop = FALSE]
+    
+    Xtest = X[idxTest[[r]], ,drop = FALSE]
+    Ytest = Y[idxTest[[r]], ,drop = FALSE]
+    
     # Fit models
     useElastic = !is.null(warpData)
     startFit = Sys.time()
@@ -113,7 +113,7 @@ mvCV = function(bayesModel,
       fit = mvBayes(bayesModel, Xtrain, Ytrain, ...)
     }
     fitTime[r] = as.numeric(Sys.time() - startFit, units = "secs")
-
+    
     # Calculate rmse of posterior mean
     start_pred = Sys.time()
     preds = predict(fit, Xtest)
@@ -129,7 +129,7 @@ mvCV = function(bayesModel,
       preds = preds[idxSamplesUse, , , drop = FALSE]
     }
     predictTime[r] = as.numeric(Sys.time() - start_pred, units = "secs")
-
+    
     Yhat = matrix(apply(preds, 2:3, median),
                   nrow = dim(preds)[2],
                   ncol = dim(preds)[3])
@@ -138,7 +138,7 @@ mvCV = function(bayesModel,
       C = fit$basisInfo$basisConstruct$C
       id = fit$basisInfo$basisConstruct$id
       srvf = fit$basisInfo$basisConstruct$srvf
-
+      
       fnTest = warpData$fn[, idxTest[[r]], drop = FALSE]
       if (srvf) {
         m_new = sign(fnTest[id, ]) * sqrt(abs(fnTest[id, ]))
@@ -147,9 +147,9 @@ mvCV = function(bayesModel,
       } else {
         qn1 = fnTest
       }
-
+      
       gamTest = warpData$warping_functions[, idxTest[[r]], drop = FALSE]
-
+      
       if (basisType == "jfpca") {
         time = seq(0, 1, length.out = ncol(Ytest))
         binsize <- mean(diff(time))
@@ -166,19 +166,31 @@ mvCV = function(bayesModel,
     }
     rmse[r] = sqrt(mean((Ytest - Yhat)^2))
     rSquared[r] = 1 - mean((Ytest - Yhat)^2) / mean((t(Ytest) - fit$basisInfo$Ycenter)^2)
-
+    
     # Get truncation error for UQ
     if (uqTruncMethod == "gaussian") {
       truncErrorVar = cov(fit$basisInfo$truncError)
-      truncError = array(MASS::mvrnorm(prod(dim(preds)[1:2]), rep(0, dim(preds)[3]), truncErrorVar), dim = dim(preds))
+      truncError = array(
+        MASS::mvrnorm(
+          prod(dim(preds)[1:2]),
+          rep(0, dim(preds)[3]),
+          truncErrorVar
+        ),
+        dim = dim(preds)
+      )
     } else if (uqTruncMethod == "empirical") {
       idxResample = sample(nTrain[r], size = prod(dim(preds)[1:2]), replace = TRUE)
-      truncError = aperm(array(t(fit$basisInfo$truncError[idxResample, ]), dim =
-                                 dim(preds)[c(3, 1, 2)]), c(2, 3, 1))
+      truncError = aperm(
+        array(
+          t(fit$basisInfo$truncError[idxResample, ]),
+          dim = dim(preds)[c(3, 1, 2)]
+        ),
+        c(2, 3, 1)
+      )
     }
     preds = preds + truncError
     rm(truncError)
-
+    
     # Get regression error for UQ
     coefsResidError = array(dim = c(dim(preds)[1:2], fit$basisInfo$nBasis))
     for (k in 1:fit$basisInfo$nBasis) {
@@ -192,34 +204,59 @@ mvCV = function(bayesModel,
         coefsResidMean <- 0
         coefsResidSD = fit$bmList[[k]]$samples$residSD
       }
-      coefsResidError[, , k] = rnorm(prod(dim(preds)[1:2]), mean = coefsResidMean, sd =
-                                       coefsResidSD)
+      coefsResidError[, , k] = rnorm(
+        prod(dim(preds)[1:2]),
+        mean = coefsResidMean,
+        sd = coefsResidSD
+      )
     }
     residError = array(dim = dim(preds))
+    basisScaledT = t(t(fit$basisInfo$basis) * fit$basisInfo$Yscale)
     for (idxMCMC in 1:dim(preds)[1]) {
-      coefsResidErrorMC = matrix(coefsResidError[idxMCMC, , ],
-                                 nrow = dim(preds)[2],
-                                 ncol = fit$basisInfo$nBasis)
-      residError[idxMCMC, , ] = coefsResidErrorMC %*% t(t(fit$basisInfo$basis) * fit$basisInfo$Yscale)
+      coefsResidErrorMC = matrix(
+        coefsResidError[idxMCMC, , ],
+        nrow = dim(preds)[2],
+        ncol = fit$basisInfo$nBasis
+      )
+      residError[idxMCMC, , ] = coefsResidErrorMC %*% basisScaledT
     }
     rm(coefsResidError)
     preds = preds + residError
     rm(residError)
-
-    # Calculate energy score
+    
+    # Calculate CRPS
+    # CRPS is computed pointwise for each response dimension and then averaged
+    # over response dimensions and test observations.
     nSamples = dim(preds)[1]
     nObs = dim(preds)[2]
-    esObs = numeric(nObs)
-    for (i in 1:nObs) {
-      pred_mat = matrix(preds[, i, ], nrow = nSamples, ncol = dim(preds)[3])
-      y_i = Ytest[i, ]
-      term1 = mean(sqrt(rowSums((pred_mat - matrix(y_i, nrow = nSamples, ncol = length(y_i), byrow = TRUE))^2)))
-      dmat = as.matrix(dist(pred_mat))
-      term2 = 0.5 * mean(dmat)
-      esObs[i] = term1 - term2
-    }
-    energyScore[r] = mean(esObs)
+    nResp = dim(preds)[3]
+    
+    weights = 2 * (1:nSamples) - nSamples - 1
+    yMat = matrix(0, nrow = nSamples, ncol = nObs)
+    crps_sum = 0
+    
+    for (j in 1:nResp) {
+      pred_j = preds[, , j, drop = FALSE][, , 1]   # nSamples x nObs
+      y_j = Ytest[, j]                             # length nObs
       
+      # Faster than constructing matrix(y_j, ..., byrow = TRUE) each iteration
+      yMat[] = y_j
+      term1 = colMeans(abs(pred_j - yMat))
+      
+      # Compute sorted columns with an explicit loop to avoid apply() overhead
+      pred_j_sort = matrix(NA_real_, nrow = nSamples, ncol = nObs)
+      for (i in 1:nObs) {
+        pred_j_sort[, i] = sort.int(pred_j[, i], method = "auto")
+      }
+      
+      # Closed-form for 0.5 * E|X - X'|
+      term2 = as.numeric(crossprod(weights, pred_j_sort)) / (nSamples^2)
+      
+      crps_sum = crps_sum + sum(term1 - term2)
+    }
+    
+    crps[r] = crps_sum / (nObs * nResp)
+    
     # Calculate distance from posterior mean
     distBound = numeric(dim(preds)[2])
     for (idx in 1:dim(preds)[2]) {
@@ -230,7 +267,7 @@ mvCV = function(bayesModel,
       distBound[idx] = quantile(distSamples, coverageTarget)
     }
     distTest = sqrt(apply((Ytest - Yhat)^2, 1, mean))
-
+    
     # Calculate UQ metrics
     distRatio = distTest / distBound
     coverage[r] = mean(distRatio <= 1)
@@ -238,7 +275,7 @@ mvCV = function(bayesModel,
     intervalScore[r] = intervalWidth[r] * exp(mean(log(distRatio) * (distRatio > 1)) /
                                                 alpha)
   }
-
+  
   out = list(
     rmse = rmse,
     rSquared = rSquared,
@@ -246,11 +283,11 @@ mvCV = function(bayesModel,
     coverage = coverage,
     intervalWidth = intervalWidth,
     intervalScore = intervalScore,
-    energyScore = energyScore,
+    crps = crps,
     fitTime = fitTime,
     predictTime = predictTime,
     call = match.call()
   )
-
+  
   return(structure(out, class = 'mvBayesCV'))
 }
