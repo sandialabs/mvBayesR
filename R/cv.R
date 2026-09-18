@@ -117,22 +117,27 @@ mvCV = function(bayesModel,
     # Calculate rmse of posterior mean
     start_pred = Sys.time()
     preds = predict(fit, Xtest)
-    if (idxSamples[1] != "all") {
+    predictTime[r] = as.numeric(Sys.time() - start_pred, units = "secs")
+    
+    d = dim(preds)
+    nSamples = d[1]
+    if (!identical(idxSamples, "all")) {
       if (identical(idxSamples, "final")) {
-        idxSamplesUse = dim(preds)[1]
+        idxSamplesUse = nSamples
       } else if (is.numeric(idxSamples)) {
         idxSamplesUse = idxSamples
       } else {
         stop("'idxSamples' must be 'all', 'final', or numeric.")
       }
-      # drop=FALSE keeps the nSamples dimension for a single index
       preds = preds[idxSamplesUse, , , drop = FALSE]
+      d = dim(preds)
+      nSamples = d[1]
     }
-    predictTime[r] = as.numeric(Sys.time() - start_pred, units = "secs")
+    nMV = d[3]
     
     Yhat = matrix(apply(preds, 2:3, median),
-                  nrow = dim(preds)[2],
-                  ncol = dim(preds)[3])
+                  nrow = nTest[r],
+                  ncol = nMV)
     if (useElastic) {
       basisType = fit$basisInfo$basisType
       C = fit$basisInfo$basisConstruct$C
@@ -172,18 +177,18 @@ mvCV = function(bayesModel,
       truncErrorVar = cov(fit$basisInfo$truncError)
       truncError = array(
         MASS::mvrnorm(
-          prod(dim(preds)[1:2]),
-          rep(0, dim(preds)[3]),
+          prod(c(nSamples, nTest[r])),
+          rep(0, nMV),
           truncErrorVar
         ),
-        dim = dim(preds)
+        dim = d
       )
     } else if (uqTruncMethod == "empirical") {
-      idxResample = sample(nTrain[r], size = prod(dim(preds)[1:2]), replace = TRUE)
+      idxResample = sample(nTrain[r], size = nSamples * nTest[r], replace = TRUE)
       truncError = aperm(
         array(
           t(fit$basisInfo$truncError[idxResample, ]),
-          dim = dim(preds)[c(3, 1, 2)]
+          dim = c(nMV, nSamples, nTest[r])
         ),
         c(2, 3, 1)
       )
@@ -192,7 +197,7 @@ mvCV = function(bayesModel,
     rm(truncError)
     
     # Get regression error for UQ
-    coefsResidError = array(dim = c(dim(preds)[1:2], fit$basisInfo$nBasis))
+    coefsResidError = array(dim = c(nSamples, nTest[r], fit$basisInfo$nBasis))
     for (k in 1:fit$basisInfo$nBasis) {
       if (class(fit$bmList[[k]])[1] %in% c("gbass", "tbass", "qbass", "nwbass")) {
         w <- fit$bmList[[k]]$w
@@ -205,17 +210,17 @@ mvCV = function(bayesModel,
         coefsResidSD = fit$bmList[[k]]$samples$residSD
       }
       coefsResidError[, , k] = rnorm(
-        prod(dim(preds)[1:2]),
+        nSamples * nTest[r],
         mean = coefsResidMean,
         sd = coefsResidSD
       )
     }
-    residError = array(dim = dim(preds))
+    residError = array(dim = d)
     basisScaledT = t(t(fit$basisInfo$basis) * fit$basisInfo$Yscale)
-    for (idxMCMC in 1:dim(preds)[1]) {
+    for (idxMCMC in 1:nSamples) {
       coefsResidErrorMC = matrix(
         coefsResidError[idxMCMC, , ],
-        nrow = dim(preds)[2],
+        nrow = nTest[r],
         ncol = fit$basisInfo$nBasis
       )
       residError[idxMCMC, , ] = coefsResidErrorMC %*% basisScaledT
@@ -224,45 +229,37 @@ mvCV = function(bayesModel,
     preds = preds + residError
     rm(residError)
     
+    
     # Calculate CRPS
     # CRPS is computed pointwise for each response dimension and then averaged
     # over response dimensions and test observations.
-    nSamples = dim(preds)[1]
-    nObs = dim(preds)[2]
-    nResp = dim(preds)[3]
-    
-    weights = 2 * (1:nSamples) - nSamples - 1
-    yMat = matrix(0, nrow = nSamples, ncol = nObs)
-    crps_sum = 0
-    
-    for (j in 1:nResp) {
-      pred_j = preds[, , j, drop = FALSE][, , 1]   # nSamples x nObs
-      y_j = Ytest[, j]                             # length nObs
+    weights <- 2 * seq_len(nSamples) - nSamples - 1
+    yMat <- matrix(0, nrow = nSamples, ncol = nMV)
+    crps_sum <- 0
+    for (i in seq_len(nTest[r])) {
+      pred_i <- preds[, i, , drop = FALSE]
+      dim(pred_i) <- c(nSamples, nMV)
       
-      # Faster than constructing matrix(y_j, ..., byrow = TRUE) each iteration
-      yMat[] = y_j
-      term1 = colMeans(abs(pred_j - yMat))
+      yMat[] <- Ytest[i, ]
+      term1 <- colMeans(abs(pred_i - yMat))
       
-      # Compute sorted columns with an explicit loop to avoid apply() overhead
-      pred_j_sort = matrix(NA_real_, nrow = nSamples, ncol = nObs)
-      for (i in 1:nObs) {
-        pred_j_sort[, i] = sort.int(pred_j[, i], method = "auto")
+      pred_i_sort <- matrix(NA_real_, nrow = nSamples, ncol = nMV)
+      for (j in seq_len(nMV)) {
+        pred_i_sort[, j] <- sort.int(pred_i[, j], method = "auto")
       }
       
-      # Closed-form for 0.5 * E|X - X'|
-      term2 = as.numeric(crossprod(weights, pred_j_sort)) / (nSamples^2)
-      
-      crps_sum = crps_sum + sum(term1 - term2)
+      term2 <- as.numeric(crossprod(weights, pred_i_sort)) / (nSamples^2)
+      crps_sum <- crps_sum + sum(term1 - term2)
     }
+    crps[r] <- crps_sum / (nTest[r] * nMV)
     
-    crps[r] = crps_sum / (nObs * nResp)
     
     # Calculate distance from posterior mean
-    distBound = numeric(dim(preds)[2])
-    for (idx in 1:dim(preds)[2]) {
-      predsIdx = matrix(preds[, idx, ], nrow = nSamples, ncol = dim(preds)[3])
+    distBound = numeric(nTest[r])
+    for (idx in 1:nTest[r]) {
+      predsIdx = matrix(preds[, idx, ], nrow = nSamples, ncol = nMV)
       distSamples = sqrt(rowMeans((predsIdx - matrix(
-        Yhat[idx, ], nSamples, dim(preds)[3], byrow = TRUE
+        Yhat[idx, ], nSamples, nMV, byrow = TRUE
       ))^2))
       distBound[idx] = quantile(distSamples, coverageTarget)
     }
