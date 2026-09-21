@@ -48,7 +48,7 @@ mvCV(
 \item{...}{Additional arguments to mvBayes, including arguments to bayesModel.}
 }
 \value{
-An object of class "mvBayesCV", which is a list containing the out-of-sample rmse for each replication, the fitting and prediction times, and the function call. Other prediction metrics, including coverage of prediction intervals, are forthcoming.
+An object of class "mvBayesCV", which is a list containing out-of-sample performance metrics for each replication, including rmse, rSquared, coverage, intervalWidth, intervalScore, crps, fitting and prediction times, and the function call.
 }
 \description{
 Wrapper to fit and perform cross-validation for a multivariate Bayesian regression model, using the mvBayes function.
