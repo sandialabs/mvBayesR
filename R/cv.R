@@ -29,6 +29,7 @@ mvCV = function(bayesModel,
                 coverageTarget = 0.95,
                 idxSamples = "all",
                 uqTruncMethod = c("gaussian", "empirical"),
+                intervalType = c("euclidean", "extdepth"),
                 warpData = NULL,
                 ...) {
   if (!is.null(seed)) {
@@ -254,23 +255,50 @@ mvCV = function(bayesModel,
     crps[r] <- crps_sum / (nTest[r] * nMV)
     
     
-    # Calculate distance from posterior mean
-    distBound = numeric(nTest[r])
-    for (idx in 1:nTest[r]) {
-      predsIdx = matrix(preds[, idx, ], nrow = nSamples, ncol = nMV)
-      distSamples = sqrt(rowMeans((predsIdx - matrix(
-        Yhat[idx, ], nSamples, nMV, byrow = TRUE
-      ))^2))
-      distBound[idx] = quantile(distSamples, coverageTarget)
+    if (intervalType[1] == "euclidean") {
+      # Calculate distance from posterior mean
+      distBound = numeric(nTest[r])
+      for (idx in 1:nTest[r]) {
+        predsIdx = matrix(preds[, idx, ], nrow = nSamples, ncol = nMV)
+        distSamples = sqrt(rowMeans((predsIdx - matrix(
+          Yhat[idx, ], nSamples, nMV, byrow = TRUE
+        ))^2))
+        distBound[idx] = quantile(distSamples, coverageTarget)
+      }
+      distTest = sqrt(apply((Ytest - Yhat)^2, 1, mean))
+      
+      # Calculate UQ metrics
+      distRatio = distTest / distBound
+      coverage[r] = mean(distRatio <= 1)
+      intervalWidth[r] = exp(mean(log(distBound)))
+      intervalScore[r] = intervalWidth[r] * exp(mean(log(distRatio) * (distRatio > 1)) /
+                                                  alpha)
+    } else if (intervalType[1] == "extdepth") {
+      # Calculate extremal depth metrics
+      extdepthMetrics <- evaluateExtdepthCoverage(
+        preds = preds,
+        Ytest = Ytest,
+        alpha = alpha
+      )
+      
+      # Calculate UQ metrics
+      coverage[r] = extdepthMetrics$simultaneousCoverage
+      intervalWidth[r] = exp(mean(log(extdepthMetrics$intervalWidths)))
+
+      lowerMat <- extdepthMetrics$lower
+      upperMat <- extdepthMetrics$upper
+      centerMat <- 0.5 * (lowerMat + upperMat)
+      halfWidthMat <- 0.5 * (upperMat - lowerMat)
+      
+      # Avoid division by zero if any central-region width is numerically zero.
+      halfWidthMat <- pmax(halfWidthMat, .Machine$double.eps)
+      
+      extdepthRatio <- apply(abs(Ytest - centerMat) / halfWidthMat, 1, max)
+      
+      intervalScore[r] = intervalWidth[r] * exp(
+        mean(log(extdepthRatio) * (extdepthRatio > 1)) / alpha
+      )
     }
-    distTest = sqrt(apply((Ytest - Yhat)^2, 1, mean))
-    
-    # Calculate UQ metrics
-    distRatio = distTest / distBound
-    coverage[r] = mean(distRatio <= 1)
-    intervalWidth[r] = exp(mean(log(distBound)))
-    intervalScore[r] = intervalWidth[r] * exp(mean(log(distRatio) * (distRatio > 1)) /
-                                                alpha)
   }
   
   out = list(
