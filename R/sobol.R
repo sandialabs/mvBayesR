@@ -367,8 +367,21 @@ plot.sobol = function(x,
                       ncol = x$nMV)
 
   firstOrderRel = t(t(firstOrder) / x$varTotal)
+
+  if (!is.null(file)) {
+    grDevices::png(filename = file, ...)
+  }
+
   oldpar <- par(no.readonly = TRUE)
-  on.exit(par(oldpar))
+
+  on.exit({
+    par(oldpar)
+
+    if (!is.null(file)) {
+      grDevices::dev.off()
+    }
+  }, add = TRUE)
+
   par(
     mfrow = c(1, 2 + totalSobol),
     mar = c(5, 5, 1, 1),
@@ -562,11 +575,5 @@ plot.sobol = function(x,
 
   if (!is.null(title)) {
     mtext(title, outer = TRUE, font = 2) # Add title
-  }
-
-  # Save or display plot
-  if (!is.null(file)) {
-    grDevices::dev.copy(grDevices::png, file, ...)
-    grDevices::dev.off()
   }
 }

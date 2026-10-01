@@ -397,23 +397,41 @@ traceplot.mvBayes = function(object,
     "#9edae5"
   )
 
-  oldpar <- par(no.readonly = TRUE)
-  on.exit(par(oldpar))
-  par(mfrow = c(nrow, ncol), mar = c(5, 5, 1, 1), oma=c(0, 0, 2, 0))
+  if (!is.null(file)) {
+    grDevices::png(filename = file, ...)
+  }
 
-  for (j in 1:length(modelParams)) {
+  oldpar <- par(no.readonly = TRUE)
+
+  on.exit({
+    par(oldpar)
+
+    if (!is.null(file)) {
+      grDevices::dev.off()
+    }
+  }, add = TRUE)
+
+  par(
+    mfrow = c(nrow, ncol),
+    mar = c(5, 5, 1, 1),
+    oma = c(0, 0, 2, 0)
+  )
+
+  for (j in seq_along(modelParams)) {
     param_list <- lapply(object$bmList, function(bm)
       bm$samples[[modelParams[j]]])
+
     ylim <- range(unlist(param_list))
 
     plot(
       param_list[[1]],
       ylim = ylim,
-      xlab = 'MCMC Iteration',
+      xlab = "MCMC Iteration",
       ylab = labels[j],
       col = cmap[1],
-      type = 'l'
+      type = "l"
     )
+
     if (nBasis > 1) {
       for (k in 2:nBasis) {
         lines(param_list[[k]], col = cmap[k])
@@ -422,12 +440,7 @@ traceplot.mvBayes = function(object,
   }
 
   if (!is.null(title)) {
-    mtext(title, outer = TRUE, font = 2) # Add title
-  }
-
-  if (!is.null(file)) {
-    grDevices::dev.copy(grDevices::png, file, ...)
-    grDevices::dev.off()
+    mtext(title, outer = TRUE, font = 2)
   }
 }
 

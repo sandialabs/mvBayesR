@@ -310,8 +310,20 @@ plot.basisSetup = function(x,
     "#9edae5"
   )
 
+  if (!is.null(file)) {
+    grDevices::png(filename = file, ...)
+  }
+
   oldpar <- par(no.readonly = TRUE)
-  on.exit(par(oldpar))
+
+  on.exit({
+    par(oldpar)
+
+    if (!is.null(file)) {
+      grDevices::dev.off()
+    }
+  }, add = TRUE)
+
   par(mfrow = c(2, 2), mar = c(5, 5, 1, 1), oma=c(0, 0, 2, 0))
 
   rgbCmap = grDevices::col2rgb('darkblue')
@@ -421,10 +433,5 @@ plot.basisSetup = function(x,
 
   if (!is.null(title)) {
     mtext(title, outer = TRUE, font = 2) # Add title
-  }
-
-  if (!is.null(file)) {
-    grDevices::dev.copy(grDevices::png, file, ...)
-    grDevices::dev.off()
   }
 }
