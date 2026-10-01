@@ -26,14 +26,23 @@ mod = mvBayes(
   bass,
   X,
   Y,
-  nBasis=3
+  nBasis=3,
+  samplesExtract=function(fit){
+    list(
+      residSD = sqrt(fit$s2),
+      log.post.cold = fit$log.post.cold[(fit$nburn + 1):fit$nmcmc],
+      lam = fit$lam,
+      beta.prec = fit$beta.prec
+    )
+  },
+  idxSamplesArg='mcmc.use'
 )
 plot(mod)
 plot(mod$basisInfo, idxMV = tt, xlabel = "tt")  # Plot PCA decomposition
 traceplot(mod)
 plot(mod, idxMV = tt, xlabel = "tt") # Evaluate training data fit
 plot(mod, Xtest = Xtest, Ytest = Ytest, idxMV = tt, xlabel = "tt")  # Evaluate test data fit
-modSensitivity = mvSobol(mod, nMC = 2^12)
+modSensitivity = mvSobol(mod, nMC = 2^9)
 plot(modSensitivity, idxMV = tt, xlabel = "tt")
 
 # All posterior predictive samples
